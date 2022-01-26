@@ -1,0 +1,46 @@
+module Position_for_polymorphic_variant_errors = struct
+  type t1 = [ `A ] [@@deriving of_jsonaf]
+  type t2 = [ `B ] [@@deriving of_jsonaf]
+  type t3 = A of [ t1 | t2 ] [@@deriving of_jsonaf]
+
+  let (_ : t3) = t3_of_jsonaf (`Array [ `String "A"; `String "C" ])
+end
+
+[%%expect
+  {|
+Exception:
+(Of_jsonaf_error
+  "examples.mlt.Position_for_polymorphic_variant_errors.t1_of_jsonaf: unexpected variant constructor"
+  (String C))
+|}]
+
+let _ = [%jsonaf_of: 'a]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Type variables not allowed in [%jsonaf_of: ]. Please use locally abstract types instead.
+|}]
+
+let _ = [%of_jsonaf: 'a]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Type variables not allowed in [%of_jsonaf: ]. Please use locally abstract types instead.
+|}]
+
+let (_ : _) = [%jsonaf (() : 'a)]
+
+[%%expect {|
+Line _, characters _-_:
+Error: Extension `jsonaf' was not translated
+|}]
+
+type 'a t =
+  | None
+  | Something_else of { value : 'a }
+[@@deriving jsonaf]
+
+[%%expect {|
+|}]

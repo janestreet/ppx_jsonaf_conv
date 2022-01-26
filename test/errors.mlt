@@ -1,0 +1,161 @@
+open Jsonaf
+
+type t = int [@@deriving jsonaf] [@@jsonaf.allow_extra_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@@allow_extra_fields] is only allowed on records.
+|}]
+
+type 'a t = 'a option =
+  | None
+  | Some of 'a
+[@@deriving jsonaf] [@@jsonaf.allow_extra_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@@allow_extra_fields] is only allowed on records.
+|}]
+
+type 'a t = Some of { a : int } [@@deriving jsonaf] [@@jsonaf.allow_extra_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@@allow_extra_fields] only works on records. For inline records, do: type t = A of { a : int } [@allow_extra_fields] | B [@@deriving jsonaf]
+|}]
+
+type 'a t =
+  | Some of { a : int }
+  | None [@jsonaf.allow_extra_fields]
+[@@deriving jsonaf]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@allow_extra_fields] is only allowed on inline records.
+|}]
+
+type t =
+  | Non
+  | Som of { next : t [@default Non] [@jsonaf_drop_default.equal] }
+[@@deriving jsonaf]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: [@jsonaf_drop_default.equal] was used, but the type of the field contains a type defined in the current recursive block: t.
+This is not supported.
+Consider using [@jsonaf_drop_if _] or [@jsonaf_drop_default.jsonaf] instead.
+|}]
+
+type nonrec 'a t = { foo : 'a option [@default None] [@jsonaf_drop_default.equal] }
+[@@deriving jsonaf]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: [@jsonaf_drop_default.equal] was used, but the type of the field contains a type variable: 'a.
+Comparison is not avaiable for type variables.
+Consider using [@jsonaf_drop_if _] or [@jsonaf_drop_default.jsonaf] instead.
+|}]
+
+open Base
+
+type t = { a : int [@default 8] [@jsonaf_drop_default] } [@@deriving jsonaf_of]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error (warning 22 [preprocessor]): [@jsonaf_drop_default] is deprecated: please use one of:
+- [@jsonaf_drop_default f] and give an explicit equality function ([f = Poly.(=)] corresponds to the old behavior)
+- [@jsonaf_drop_default.compare] if the type supports [%compare]
+- [@jsonaf_drop_default.equal] if the type supports [%equal]
+- [@jsonaf_drop_default.jsonaf] if you want to compare the jsonaf representations
+|}]
+
+type t = { x : unit [@jsonaf.opaque] } [@@deriving jsonaf_of]
+type t = { x : unit [@jsonaf.opaque] } [@@deriving of_jsonaf]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: Attribute `jsonaf.opaque' was not used.
+Hint: `jsonaf.opaque' is available for core types but is used here in the
+context of a label declaration.
+Did you put it at the wrong level?
+Line _, characters _-_:
+Error: Attribute `jsonaf.opaque' was not used.
+Hint: `jsonaf.opaque' is available for core types but is used here in the
+context of a label declaration.
+Did you put it at the wrong level?
+|}]
+
+type t = { x : unit [@jsonaf.option] } [@@deriving jsonaf_of]
+type t = { x : unit [@jsonaf.option] } [@@deriving of_jsonaf]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@jsonaf.option] is only allowed on type [_ option].
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: [@jsonaf.option] is only allowed on type [_ option].
+|}]
+
+type t = int [@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
+
+type t = A [@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
+
+type t =
+  [ `A
+  | `B
+  ]
+[@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
+
+type t = int * int [@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
+
+type t = { x : u }
+
+and vvv = int
+
+and u = { y : t } [@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
+
+type t = string list [@@deriving jsonaf_fields]
+
+[%%expect
+  {|
+Line _, characters _-_:
+Error: ppx_jsonaf_conv: jsonaf_fields only works on records
+|}]
