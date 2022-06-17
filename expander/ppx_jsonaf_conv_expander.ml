@@ -531,7 +531,7 @@ module Str_generate_jsonaf_of = struct
       | Some jsonaf_of -> [%expr [%e jsonaf_of] [%e cnv_expr]]
     in
     let expr =
-      let v_name = [%expr [%e "v_" ^ name]] in
+      let v_name = "v_" ^ name in
       [%expr
         let bnds =
           [%e
