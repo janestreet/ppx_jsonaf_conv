@@ -1,4 +1,4 @@
-#+TITLE: ppx\_jsonaf\_conv
+#+TITLE: ppx_jsonaf_conv
 
 
 * [@@deriving jsonaf]

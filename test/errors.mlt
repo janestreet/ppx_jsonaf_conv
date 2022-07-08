@@ -83,14 +83,16 @@ type t = { x : unit [@jsonaf.opaque] } [@@deriving of_jsonaf]
   {|
 Line _, characters _-_:
 Error: Attribute `jsonaf.opaque' was not used.
-Hint: `jsonaf.opaque' is available for core types but is used here in the
-context of a label declaration.
-Did you put it at the wrong level?
+       Hint: `jsonaf.opaque' is available for core types but is used here in
+       the
+       context of a label declaration.
+       Did you put it at the wrong level?
 Line _, characters _-_:
 Error: Attribute `jsonaf.opaque' was not used.
-Hint: `jsonaf.opaque' is available for core types but is used here in the
-context of a label declaration.
-Did you put it at the wrong level?
+       Hint: `jsonaf.opaque' is available for core types but is used here in
+       the
+       context of a label declaration.
+       Did you put it at the wrong level?
 |}]
 
 type t = { x : unit [@jsonaf.option] } [@@deriving jsonaf_of]
@@ -141,9 +143,7 @@ Error: ppx_jsonaf_conv: jsonaf_fields only works on records
 |}]
 
 type t = { x : u }
-
 and vvv = int
-
 and u = { y : t } [@@deriving jsonaf_fields]
 
 [%%expect

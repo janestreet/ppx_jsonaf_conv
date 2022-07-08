@@ -527,7 +527,7 @@ module User_specified_conversion = struct
   type my_float = float
 
   let jsonaf_of_my_float n = `Number (Float.to_string n)
-  let my_float_of_jsonaf = float_of_jsonaf
+  let my_float_of_jsonaf = Export.float_of_jsonaf
 
   let%expect_test _ =
     let my_float : my_float = 1.2 in
@@ -662,10 +662,10 @@ module Polymorphic_record_field = struct
 
   let%expect_test _ =
     let t x = { poly = []; maybe_x = Some x } in
-    let jsonaf = jsonaf_of_t jsonaf_of_int (t 1) in
+    let jsonaf = jsonaf_of_t Export.jsonaf_of_int (t 1) in
     print_s (Jsonaf.sexp_of_t jsonaf);
-    require [%here] Poly.(t_of_jsonaf int_of_jsonaf jsonaf = t 1);
-    require [%here] Poly.(jsonaf_of_t jsonaf_of_int (t 1) = jsonaf);
+    require [%here] Poly.(t_of_jsonaf Export.int_of_jsonaf jsonaf = t 1);
+    require [%here] Poly.(jsonaf_of_t Export.jsonaf_of_int (t 1) = jsonaf);
     [%expect {| (Object ((poly (Array ())) (maybe_x (Number 1)))) |}]
   ;;
 end
@@ -913,11 +913,11 @@ end
 module Omit_nil = struct
   type natural_option = int [@@deriving equal]
 
-  let jsonaf_of_natural_option i = if i >= 0 then jsonaf_of_int i else `Null
+  let jsonaf_of_natural_option i = if i >= 0 then Export.jsonaf_of_int i else `Null
 
   let natural_option_of_jsonaf = function
     | `Null -> -1
-    | jsonaf -> int_of_jsonaf jsonaf
+    | jsonaf -> Export.int_of_jsonaf jsonaf
   ;;
 
   type t = { a : natural_option [@default -1] [@jsonaf_drop_default.equal] }

@@ -15,7 +15,7 @@ depends: [
   "jsonaf"
   "ppx_jane"
   "dune"     {>= "2.0.0"}
-  "ppxlib"   {>= "0.23.0"}
+  "ppxlib"   {>= "0.26.0"}
 ]
 synopsis: "[@@deriving] plugin to generate Jsonaf conversion functions"
 description: "
