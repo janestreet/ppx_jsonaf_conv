@@ -111,22 +111,3 @@ let jsonaf =
 ;;
 
 let jsonaf_poly = Deriving.add_alias "jsonaf_poly" [ jsonaf_of; of_jsonaf_poly ]
-
-let _ =
-  let primitives =
-    Longident.parse (Printf.sprintf "Ppx_jsonaf_conv_lib.Jsonaf_conv.Primitives")
-  in
-  Driver.register_transformation "Ppx_jsonaf_conv.enclose_impl" ~enclose_impl:(function
-    | None -> [], []
-    | Some loc ->
-      let loc = { loc with loc_end = loc.loc_start } in
-      ( [ Ast_builder.Default.(
-          pstr_open
-            ~loc
-            (open_infos
-               ~loc
-               ~expr:(pmod_ident ~loc (Located.mk ~loc primitives))
-               ~override:Override))
-        ]
-      , [] ))
-;;

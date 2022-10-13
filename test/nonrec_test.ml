@@ -1,3 +1,5 @@
+open Jsonaf.Export
+
 type t = float [@@deriving jsonaf]
 
 module M : sig

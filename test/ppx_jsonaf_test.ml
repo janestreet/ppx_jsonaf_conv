@@ -4,6 +4,8 @@ open! Jsonaf
 open Expect_test_helpers_core
 
 (* Module names below are used in error messages being tested. *)
+open Jsonaf.Export
+
 [@@@warning "-unused-module"]
 
 include struct

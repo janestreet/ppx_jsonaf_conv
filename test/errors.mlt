@@ -1,4 +1,4 @@
-open Jsonaf
+open Jsonaf.Export
 
 type t = int [@@deriving jsonaf] [@@jsonaf.allow_extra_fields]
 
