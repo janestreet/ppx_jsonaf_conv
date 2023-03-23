@@ -784,7 +784,8 @@ module Str_generate_jsonaf_of = struct
     | Pcstr_tuple pcd_args ->
       (match pcd_args with
        | [] ->
-         ppat_construct ~loc constr_lid None --> [%expr `Array [ `String [%e constr_str] ]]
+         ppat_construct ~loc constr_lid None
+         --> [%expr `Array [ `String [%e constr_str] ]]
        | args ->
          let jsonaf_of_args =
            List.map ~f:(jsonaf_of_type ~typevar_handling:(`ok renaming)) args
@@ -1424,10 +1425,7 @@ module Str_generate_of_jsonaf = struct
         flds
         expr_ref_inits
         ~f:(fun { pld_name = { txt = name; loc }; _ } init ->
-          value_binding
-            ~loc
-            ~pat:(pvar ~loc (name ^ "_field"))
-            ~expr:[%expr ref [%e init]])
+          value_binding ~loc ~pat:(pvar ~loc (name ^ "_field")) ~expr:[%expr ref [%e init]])
     in
     pexp_let
       ~loc
@@ -1545,9 +1543,8 @@ module Str_generate_of_jsonaf = struct
               pexp_construct ~loc (Located.lident ~loc cnstr_label) (Some e))
         in
         [%pat?
-               `Array
-               [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ] as
-          jsonaf]
+               `Array [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ]
+          as jsonaf]
         --> expr
       | { pcd_args = Pcstr_tuple []; _ } ->
         Attrs.fail_if_allow_extra_field_cd ~loc cd;
