@@ -244,13 +244,13 @@ let tvars_of_core_type : core_type -> string list =
 ;;
 
 let constrained_function_binding
-      (* placing a suitably polymorphic or rigid type constraint on the pattern or body *)
-      (loc : Location.t)
-      (td : type_declaration)
-      (typ : core_type)
-      ~(tps : string loc list)
-      ~(func_name : string)
-      (body : expression)
+  (* placing a suitably polymorphic or rigid type constraint on the pattern or body *)
+    (loc : Location.t)
+  (td : type_declaration)
+  (typ : core_type)
+  ~(tps : string loc list)
+  ~(func_name : string)
+  (body : expression)
   =
   let vars = tvars_of_core_type typ in
   let has_vars =
@@ -289,16 +289,16 @@ let constrained_function_binding
 
 let really_recursive rec_flag tds =
   (object
-    inherit type_is_recursive rec_flag tds as super
+     inherit type_is_recursive rec_flag tds as super
 
-    method! core_type ctype =
-      match ctype with
-      | _ when Option.is_some (Attribute.get ~mark_as_seen:false Attrs.opaque ctype) ->
-        ()
-      | [%type: [%t? _] jsonaf_opaque] -> ()
-      | _ -> super#core_type ctype
+     method! core_type ctype =
+       match ctype with
+       | _ when Option.is_some (Attribute.get ~mark_as_seen:false Attrs.opaque ctype) ->
+         ()
+       | [%type: [%t? _] jsonaf_opaque] -> ()
+       | _ -> super#core_type ctype
   end)
-  #go
+    #go
     ()
 ;;
 
@@ -368,8 +368,8 @@ module Str_generate_jsonaf_of = struct
 
   (* Conversion of types *)
   let rec jsonaf_of_type
-            ~(typevar_handling : [ `ok of Renaming.t | `disallowed_in_type_expr ])
-            typ
+    ~(typevar_handling : [ `ok of Renaming.t | `disallowed_in_type_expr ])
+    typ
     : Fun_or_match.t
     =
     let loc = { typ.ptyp_loc with loc_ghost = true } in
@@ -425,8 +425,8 @@ module Str_generate_jsonaf_of = struct
 
   (* Conversion of variant types *)
   and jsonaf_of_variant
-        ~typevar_handling
-        ((loc, row_fields) : Location.t * row_field list)
+    ~typevar_handling
+    ((loc, row_fields) : Location.t * row_field list)
     : Fun_or_match.t
     =
     let item row =
@@ -618,43 +618,43 @@ module Str_generate_jsonaf_of = struct
   ;;
 
   let jsonaf_of_default_field
-        ~types_being_defined
-        how
-        ~renaming
-        patt
-        expr
-        name
-        tp
-        ?jsonaf_of
-        default
-        key
+    ~types_being_defined
+    how
+    ~renaming
+    patt
+    expr
+    name
+    tp
+    ?jsonaf_of
+    default
+    key
     =
     let is_empty =
       match how with
       | `jsonaf ->
         Inspect_jsonaf
           (fun ~cnv_expr loc jsonaf_expr ->
-             [%expr
-               Ppx_jsonaf_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e jsonaf_expr]])
+            [%expr
+              Ppx_jsonaf_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e jsonaf_expr]])
       | (`no_arg | `func _ | `compare | `equal) as how ->
         let equality_f loc =
           match how with
           | `no_arg ->
             [%expr
               Ppx_jsonaf_conv_lib.poly_equal [@ocaml.ppwarning
-                "[@jsonaf_drop_default] is deprecated: \
-                 please use one of:\n\
-                 - [@jsonaf_drop_default f] and give an \
-                 explicit equality function ([f = \
-                 Poly.(=)] corresponds to the old \
-                 behavior)\n\
-                 - [@jsonaf_drop_default.compare] if the \
-                 type supports [%compare]\n\
-                 - [@jsonaf_drop_default.equal] if the \
-                 type supports [%equal]\n\
-                 - [@jsonaf_drop_default.jsonaf] if you \
-                 want to compare the jsonaf \
-                 representations\n"]]
+                                               "[@jsonaf_drop_default] is deprecated: \
+                                                please use one of:\n\
+                                                - [@jsonaf_drop_default f] and give an \
+                                                explicit equality function ([f = \
+                                                Poly.(=)] corresponds to the old \
+                                                behavior)\n\
+                                                - [@jsonaf_drop_default.compare] if the \
+                                                type supports [%compare]\n\
+                                                - [@jsonaf_drop_default.equal] if the \
+                                                type supports [%equal]\n\
+                                                - [@jsonaf_drop_default.jsonaf] if you \
+                                                want to compare the jsonaf \
+                                                representations\n"]]
           | `func f -> f
           | `compare ->
             disallow_type_variables_and_recursive_occurrences
@@ -755,15 +755,15 @@ module Str_generate_jsonaf_of = struct
         in
         ( patt
         , [%expr
-          let bnds = [%e bnds] in
-          [%e expr]] )
+            let bnds = [%e bnds] in
+            [%e expr]] )
     in
     let init_expr = wrap_expr [%expr bnds] in
     let patt, expr = List.fold_left ~f:coll ~init:([], init_expr) flds in
     ( ppat_record ~loc patt Closed
     , [%expr
-      let bnds : (string * Ppx_jsonaf_conv_lib.Jsonaf_kernel.t) list = [] in
-      [%e expr]] )
+        let bnds : (string * Ppx_jsonaf_conv_lib.Jsonaf_kernel.t) list = [] in
+        [%e expr]] )
   ;;
 
   (* Conversion of sum types *)
@@ -1058,10 +1058,10 @@ module Str_generate_of_jsonaf = struct
       --> pexp_let ~loc Nonrecursive bindings (pexp_tuple ~loc vars)
     ; [%pat? jsonaf]
       --> [%expr
-        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.tuple_of_size_n_expected
-          _tp_loc
-          [%e eint ~loc n]
-          jsonaf]
+            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.tuple_of_size_n_expected
+              _tp_loc
+              [%e eint ~loc n]
+              jsonaf]
     ]
 
   (* Generate code for matching included variant types *)
@@ -1083,7 +1083,7 @@ module Str_generate_of_jsonaf = struct
               ~loc
               [%expr
                 ([%e Fun_or_match.expr ~loc app]
-                 :> [%t replace_variables_by_underscores full_type])]
+                  :> [%t replace_variables_by_underscores full_type])]
               match_exc
       ]
     in
@@ -1205,14 +1205,14 @@ module Str_generate_of_jsonaf = struct
       --> match_struct
     ; [%pat? `Array (`Array _ :: _) as jsonaf]
       --> [%expr
-        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_poly_var
-          _tp_loc
-          jsonaf]
+            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_poly_var
+              _tp_loc
+              jsonaf]
     ; [%pat? `Array [] as jsonaf]
       --> [%expr
-        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_poly_var
-          _tp_loc
-          jsonaf]
+            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_poly_var
+              _tp_loc
+              jsonaf]
     ; [%pat? _ as jsonaf]
       --> [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
     ]
@@ -1231,11 +1231,11 @@ module Str_generate_of_jsonaf = struct
           let call =
             [%expr
               ([%e
-                Fun_or_match.expr
-                  ~loc
-                  (type_of_jsonaf ~typevar_handling ~internal:true inh)]
+                 Fun_or_match.expr
+                   ~loc
+                   (type_of_jsonaf ~typevar_handling ~internal:true inh)]
                  jsonaf
-               :> [%t replace_variables_by_underscores full_type])]
+                :> [%t replace_variables_by_underscores full_type])]
           in
           match row_fields with
           | [] -> call
@@ -1313,13 +1313,13 @@ module Str_generate_of_jsonaf = struct
            let args =
              (pstring ~loc key
               --> [%expr
-                match Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
-                | Ppx_jsonaf_conv_lib.Option.None ->
-                  let fvalue = [%e unrolled] in
-                  [%e evar ~loc (nm ^ "_field")]
-                  := Ppx_jsonaf_conv_lib.Option.Some fvalue
-                | Ppx_jsonaf_conv_lib.Option.Some _ ->
-                  duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
+                    match Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
+                    | Ppx_jsonaf_conv_lib.Option.None ->
+                      let fvalue = [%e unrolled] in
+                      [%e evar ~loc (nm ^ "_field")]
+                      := Ppx_jsonaf_conv_lib.Option.Some fvalue
+                    | Ppx_jsonaf_conv_lib.Option.Some _ ->
+                      duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
              :: args
            in
            loop inits no_args args more_flds)
@@ -1356,8 +1356,8 @@ module Str_generate_of_jsonaf = struct
             | None ->
               has_nonopt_fields := true;
               ( [%expr
-                Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
-              , [%e estring ~loc nm]]
+                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
+                  , [%e estring ~loc nm]]
                 :: bi_lst
               , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
                 :: good_patts )
@@ -1406,10 +1406,10 @@ module Str_generate_of_jsonaf = struct
         [ patt --> match_good_expr
         ; [%pat? _]
           --> [%expr
-            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_undefined_elements
-              _tp_loc
-              jsonaf
-              [%e elist ~loc bi_lst]]
+                Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_undefined_elements
+                  _tp_loc
+                  jsonaf
+                  [%e elist ~loc bi_lst]]
         ]
     else pexp_match ~loc expr [ patt --> match_good_expr ]
   ;;
@@ -1425,7 +1425,7 @@ module Str_generate_of_jsonaf = struct
         flds
         expr_ref_inits
         ~f:(fun { pld_name = { txt = name; loc }; _ } init ->
-          value_binding ~loc ~pat:(pvar ~loc (name ^ "_field")) ~expr:[%expr ref [%e init]])
+        value_binding ~loc ~pat:(pvar ~loc (name ^ "_field")) ~expr:[%expr ref [%e init]])
     in
     pexp_let
       ~loc
@@ -1441,8 +1441,8 @@ module Str_generate_of_jsonaf = struct
               ~loc
               [ [%pat? (field_name, _field_jsonaf) :: tail]
                 --> [%expr
-                  [%e pexp_match ~loc [%expr field_name] mc_fields_with_args];
-                  iter tail]
+                      [%e pexp_match ~loc [%expr field_name] mc_fields_with_args];
+                      iter tail]
               ; [%pat? []] --> [%expr ()]
               ]]
         in
@@ -1470,11 +1470,11 @@ module Str_generate_of_jsonaf = struct
   ;;
 
   let label_declaration_list_of_jsonaf
-        ~typevar_handling
-        ~allow_extra_fields
-        loc
-        flds
-        ~wrap_expr
+    ~typevar_handling
+    ~allow_extra_fields
+    loc
+    flds
+    ~wrap_expr
     =
     let has_poly = is_poly (loc, flds) in
     let cnv_fields =
@@ -1518,9 +1518,9 @@ module Str_generate_of_jsonaf = struct
               ~wrap_expr:(fun x -> x)
       ; [%pat? _ as jsonaf]
         --> [%expr
-          Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_list_instead_atom
-            _tp_loc
-            jsonaf]
+              Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_list_instead_atom
+                _tp_loc
+                jsonaf]
       ]
   ;;
 
@@ -1543,7 +1543,7 @@ module Str_generate_of_jsonaf = struct
               pexp_construct ~loc (Located.lident ~loc cnstr_label) (Some e))
         in
         [%pat?
-               `Array [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ]
+          `Array [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ]
           as jsonaf]
         --> expr
       | { pcd_args = Pcstr_tuple []; _ } ->
@@ -1553,7 +1553,7 @@ module Str_generate_of_jsonaf = struct
       | { pcd_args = Pcstr_tuple (_ :: _ as tps); _ } ->
         Attrs.fail_if_allow_extra_field_cd ~loc cd;
         [%pat?
-               `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as
+          `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as
           _jsonaf]
         --> mk_cnstr_args_match ~typevar_handling ~loc ~is_variant:false label tps)
   ;;
@@ -1583,17 +1583,17 @@ module Str_generate_of_jsonaf = struct
          ; mk_bad_sum_matches (loc, alts)
          ; [ [%pat? `Array (`Array _ :: _) as jsonaf]
              --> [%expr
-               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_sum
-                 _tp_loc
-                 jsonaf]
+                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_sum
+                     _tp_loc
+                     jsonaf]
            ; [%pat? `Array [] as jsonaf]
              --> [%expr
-               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_sum
-                 _tp_loc
-                 jsonaf]
+                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_sum
+                     _tp_loc
+                     jsonaf]
            ; [%pat? _ as jsonaf]
              --> [%expr
-               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
+                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
            ]
          ])
   ;;
@@ -1701,9 +1701,9 @@ module Str_generate_of_jsonaf = struct
           let no_variant_match_mc =
             [ [%pat? Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match]
               --> [%expr
-                Ppx_jsonaf_conv_lib.Jsonaf_conv_error.no_matching_variant_found
-                  _tp_loc
-                  jsonaf]
+                    Ppx_jsonaf_conv_lib.Jsonaf_conv_error.no_matching_variant_found
+                      _tp_loc
+                      jsonaf]
             ]
           in
           let internal_call =
