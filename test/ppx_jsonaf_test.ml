@@ -26,9 +26,7 @@ module Fields = struct
 
   let%expect_test _ =
     print_s [%sexp (jsonaf_fields_of_ty : string list)];
-    [%expect {|
-     (x some some)
-  |}]
+    [%expect {| (x some some) |}]
   ;;
 end
 
@@ -47,9 +45,9 @@ module Option = struct
     if None = c.x then Stdio.print_endline "x = None";
     if None = c.y then Stdio.print_endline "y = None";
     [%expect {|
-     x = None
-     y = None
-  |}]
+      x = None
+      y = None
+      |}]
   ;;
 end
 
@@ -73,9 +71,7 @@ module Default_omit = struct
     print_s (Jsonaf.sexp_of_t jsonaf);
     require [%here] (ty_of_jsonaf jsonaf = value);
     require [%here] (ty_of_jsonaf jsonaf' = value);
-    [%expect {|
-     (Object ((x Null) (b (Number 1))))
-  |}]
+    [%expect {| (Object ((x Null) (b (Number 1)))) |}]
   ;;
 end
 
@@ -100,7 +96,8 @@ module Tuple = struct
       (Array (
         (Number 1)
         (Number 2)
-        (String example))) |}]
+        (String example)))
+      |}]
   ;;
 end
 
@@ -139,7 +136,8 @@ module Types = struct
         (String baddecaf)
         (String c)
         Null
-        (Number 1))) |}]
+        (Number 1)))
+      |}]
   ;;
 
   type lt = int lazy_t [@@deriving jsonaf]
@@ -152,8 +150,7 @@ module Types = struct
         require [%here] (Jsonaf.exactly_equal (jsonaf_of_lt value) jsonaf);
         require [%here] Poly.(lt_of_jsonaf jsonaf = value))
       [ lazy 1 ];
-    [%expect {|
-      (Number 1) |}]
+    [%expect {| (Number 1) |}]
   ;;
 
   type opt = int option [@@deriving jsonaf, equal]
@@ -170,7 +167,8 @@ module Types = struct
       [ Some 1; None ];
     [%expect {|
       (Number 1)
-      Null |}]
+      Null
+      |}]
   ;;
 
   let%expect_test _ =
@@ -187,7 +185,8 @@ module Types = struct
       (Array ((Number 1)))
       (Array (
         (Number 1)
-        (Number 2))) |}]
+        (Number 2)))
+      |}]
   ;;
 
   let%expect_test _ =
@@ -203,7 +202,8 @@ module Types = struct
       (Array ((Number 1)))
       (Array (
         (Number 1)
-        (Number 2))) |}]
+        (Number 2)))
+      |}]
   ;;
 
   let%expect_test _ =
@@ -230,7 +230,8 @@ module Types = struct
       (Number -1.23)
       (Number 0.123456789012345677)
       (Number 1.23456789012345682e+25)
-      (Number 123456789012345680) |}]
+      (Number 123456789012345680)
+      |}]
   ;;
 
   let%expect_test _ =
@@ -241,7 +242,8 @@ module Types = struct
       {|
       (Failure "Cannot represent non-finite float as JSON: nan")
       (Failure "Cannot represent non-finite float as JSON: inf")
-      (Failure "Cannot represent non-finite float as JSON: -inf") |}]
+      (Failure "Cannot represent non-finite float as JSON: -inf")
+      |}]
   ;;
 
   let%expect_test _ =
@@ -254,7 +256,8 @@ module Types = struct
     [%expect {|
       1
       1
-      1 |}]
+      1
+      |}]
   ;;
 
   let%expect_test _ =
@@ -266,7 +269,8 @@ module Types = struct
       [ `Number "1"; `Number "1" ];
     [%expect {|
       1
-      1 |}]
+      1
+      |}]
   ;;
 
   let%expect_test _ =
@@ -278,7 +282,8 @@ module Types = struct
       [ `Number "1"; `Number "1" ];
     [%expect {|
       1
-      1 |}]
+      1
+      |}]
   ;;
 
   let%expect_test _ =
@@ -290,7 +295,8 @@ module Types = struct
       [ `Number "1"; `Number "1" ];
     [%expect {|
       1
-      1 |}]
+      1
+      |}]
   ;;
 
   let%expect_test _ =
@@ -307,7 +313,8 @@ module Types = struct
       (Array (
         (Array ((String key_1) (String value_1)))
         (Array ((String key_2) (String value_2)))
-        (Array ((String key_3) (String value_3))))) |}]
+        (Array ((String key_3) (String value_3)))))
+      |}]
   ;;
 end
 
@@ -354,7 +361,8 @@ module Sum_and_polymorphic_variants = struct
       (Array (
         (String Two_args)
         (Number 1)
-        (String a))) |}]
+        (String a)))
+      |}]
   ;;
 
   type nominal =
@@ -387,7 +395,8 @@ module Sum_and_polymorphic_variants = struct
       (Array (
         (String Two_args)
         (Number 1)
-        (String a))) |}]
+        (String a)))
+      |}]
   ;;
 end
 
@@ -426,7 +435,8 @@ module Name = struct
         (Number 1)
         (String a)))
       (Array ((String name_5) (Object ((a (Number 1))))))
-      (Array ((String "") (Object ((b (Number 1)))))) |}]
+      (Array ((String "") (Object ((b (Number 1))))))
+      |}]
   ;;
 end
 
@@ -451,7 +461,8 @@ module Records = struct
         (b (
           Array (
             (Array ((Number 1)   (String a)))
-            (Array ((Number 2.3) (String b)))))))) |}]
+            (Array ((Number 2.3) (String b))))))))
+      |}]
   ;;
 end
 
@@ -481,7 +492,8 @@ module Keys = struct
         (key_b (Number 2))
         (key_c (Number 3))
         (key_d (Number 4))
-        (""    (Number 5)))) |}]
+        (""    (Number 5))))
+      |}]
   ;;
 end
 
@@ -510,7 +522,8 @@ module Inline_records = struct
           (b (
             Array (
               (Array ((Number 1)   (String a)))
-              (Array ((Number 2.3) (String b)))))))))) |}]
+              (Array ((Number 2.3) (String b))))))))))
+      |}]
   ;;
 
   let%expect_test _ =
@@ -521,7 +534,8 @@ module Inline_records = struct
     [%expect {|
       (Array (
         (String B)
-        (Number 100))) |}]
+        (Number 100)))
+      |}]
   ;;
 end
 
@@ -624,7 +638,8 @@ module Polymorphic_variant_inclusion = struct
       (Array (
         (String C5)
         (Number 1.5)))
-      (Array ((String C6))) |}]
+      (Array ((String C6)))
+      |}]
   ;;
 
   type sub1_alias = sub1 [@@deriving jsonaf_poly, equal]
@@ -651,7 +666,8 @@ module Polymorphic_variant_inclusion = struct
       (Array ((String A)))
       (Array ((String C1)))
       (Array ((String C2)))
-      (Array ((String D))) |}]
+      (Array ((String D)))
+      |}]
   ;;
 end
 
@@ -942,8 +958,7 @@ module Omit_nil = struct
     print_s (Jsonaf.sexp_of_t jsonaf);
     require [%here] (t_of_jsonaf jsonaf = value);
     require [%here] (t_of_jsonaf jsonaf' = value);
-    [%expect {|
-      (Object ()) |}]
+    [%expect {| (Object ()) |}]
   ;;
 
   type t2 = A of { a : int option [@jsonaf.option] } [@@deriving jsonaf, equal]
@@ -1012,7 +1027,8 @@ module True_and_false = struct
     [%expect {|
       (Array (
         (String True)
-        (Number 1))) |}]
+        (Number 1)))
+      |}]
   ;;
 
   let%expect_test _ =
@@ -1023,7 +1039,8 @@ module True_and_false = struct
     [%expect {|
       (Array (
         (String False)
-        (Number 0))) |}]
+        (Number 0)))
+      |}]
   ;;
 
   type v =
@@ -1039,8 +1056,7 @@ module True_and_false = struct
     let jsonaf = jsonaf_of_v value in
     print_s (Jsonaf.sexp_of_t jsonaf);
     require [%here] (v_of_jsonaf jsonaf = value);
-    [%expect {|
-      (Array ((String True))) |}]
+    [%expect {| (Array ((String True))) |}]
   ;;
 
   let%expect_test _ =
@@ -1051,7 +1067,8 @@ module True_and_false = struct
     [%expect {|
       (Array (
         (String False)
-        (Number 0))) |}]
+        (Number 0)))
+      |}]
   ;;
 end
 
@@ -1078,7 +1095,8 @@ module Gadt = struct
         (String Packed)
         (Number 2)
         (String _)
-        (String <opaque>))) |}]
+        (String <opaque>)))
+      |}]
   ;;
 
   (* to_channel stderr ([%jsonaf_of: int t] (Packed (2, "asd", 1.))) *)
@@ -1091,7 +1109,8 @@ module Gadt = struct
     [%expect {|
       (Array (
         (String A)
-        (Number 2))) |}]
+        (Number 2)))
+      |}]
   ;;
 
   (* recursive *)
@@ -1100,8 +1119,7 @@ module Gadt = struct
   let%expect_test _ =
     let jsonaf = [%jsonaf_of: v] (A (Some (A None))) in
     print_s (Jsonaf.sexp_of_t jsonaf);
-    [%expect {|
-      (Array ((String A) (Array ((String A) Null)))) |}]
+    [%expect {| (Array ((String A) (Array ((String A) Null)))) |}]
   ;;
 
   (* implicit existential variable *)
@@ -1116,7 +1134,8 @@ module Gadt = struct
         (String A)
         (String _)
         (Number 2)
-        (String <fun>))) |}]
+        (String <fun>)))
+      |}]
   ;;
 
   (* tricky variable naming *)
@@ -1128,7 +1147,8 @@ module Gadt = struct
     [%expect {|
       (Array (
         (String A)
-        (String _))) |}]
+        (String _)))
+      |}]
   ;;
 
   (* interaction with inline record *)
@@ -1137,8 +1157,7 @@ module Gadt = struct
   let%expect_test _ =
     let jsonaf = [%jsonaf_of: int x2] (A { x = 1 }) in
     print_s (Jsonaf.sexp_of_t jsonaf);
-    [%expect {|
-      (Array ((String A) (Object ((x (Number 1)))))) |}]
+    [%expect {| (Array ((String A) (Object ((x (Number 1)))))) |}]
   ;;
 
   (* unused but colliding variables *)
@@ -1147,8 +1166,7 @@ module Gadt = struct
   let%expect_test _ =
     let jsonaf = [%jsonaf_of: (int, int) y] A in
     print_s (Jsonaf.sexp_of_t jsonaf);
-    [%expect {|
-      (Array ((String A))) |}]
+    [%expect {| (Array ((String A))) |}]
   ;;
 
   (* making sure we're not reversing parameters *)
@@ -1163,7 +1181,8 @@ module Gadt = struct
         (String A)
         (Array (
           (Number 1)
-          (String a))))) |}]
+          (String a)))))
+      |}]
   ;;
 
   (* interaction with universal quantifiers *)
@@ -1172,8 +1191,7 @@ module Gadt = struct
   let%expect_test _ =
     let jsonaf = [%jsonaf_of: unit z2] (A { x = None }) in
     print_s (Jsonaf.sexp_of_t jsonaf);
-    [%expect {|
-      (Array ((String A) (Object ((x Null))))) |}]
+    [%expect {| (Array ((String A) (Object ((x Null))))) |}]
   ;;
 end
 
@@ -1184,8 +1202,7 @@ module Anonymous_variable = struct
     let jsonaf = [%jsonaf_of: _ t] 2 in
     print_s (Jsonaf.sexp_of_t jsonaf);
     require [%here] Poly.([%of_jsonaf: _ t] jsonaf = 2);
-    [%expect {|
-      (Number 2) |}]
+    [%expect {| (Number 2) |}]
   ;;
 
   (* making sure we don't generate signatures like (_ -> t) -> _ t -> t which
@@ -1240,7 +1257,8 @@ module Opaque = struct
         (String <opaque>)))
       (Of_jsonaf_error
        "opaque_of_jsonaf: cannot convert opaque values"
-       (String <opaque>)) |}]
+       (String <opaque>))
+      |}]
   ;;
 
   type u = ([ `A of int ][@jsonaf.opaque]) [@@deriving jsonaf]
@@ -1255,7 +1273,8 @@ module Opaque = struct
       (String <opaque>)
       (Of_jsonaf_error
        "opaque_of_jsonaf: cannot convert opaque values"
-       (String <opaque>)) |}]
+       (String <opaque>))
+      |}]
   ;;
 end
 
@@ -1360,7 +1379,8 @@ module Allow_extra_fields = struct
          "ppx_jsonaf_test.ml.Allow_extra_fields.M1.t1_of_jsonaf: extra fields: b"
          (Object (
            (a (Number 1))
-           (b (Number 2))))) |}]
+           (b (Number 2)))))
+        |}]
     ;;
   end
 
@@ -1382,7 +1402,8 @@ module Allow_extra_fields = struct
         {|
         (Of_jsonaf_error
          "ppx_jsonaf_test.ml.Allow_extra_fields.M2.t1_of_jsonaf: extra fields: b"
-         (Array ((String A) (Object ((a (Array ((Number 0)))) (b (String 1))))))) |}]
+         (Array ((String A) (Object ((a (Array ((Number 0)))) (b (String 1)))))))
+        |}]
     ;;
   end
 end
@@ -1403,7 +1424,8 @@ module Exceptions = struct
         {|
         (Of_jsonaf_error
          "ppx_jsonaf_test.ml.Exceptions.Variant.t_of_jsonaf: unexpected variant constructor"
-         (Array ((String Z)))) |}]
+         (Array ((String Z))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1413,7 +1435,8 @@ module Exceptions = struct
         {|
         (Of_jsonaf_error
          "ppx_jsonaf_test.ml.Exceptions.Variant.t_of_jsonaf: unexpected variant constructor"
-         (Array ((String A)))) |}]
+         (Array ((String A))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1426,9 +1449,7 @@ module Exceptions = struct
     let%expect_test _ =
       let wrong_arg_type = `Array [ `String "B"; `Number "1." ] in
       require_does_raise [%here] (fun () -> t_of_jsonaf wrong_arg_type);
-      [%expect
-        {|
-        (Of_jsonaf_error "int_of_jsonaf: integer needed" (Number 1.)) |}]
+      [%expect {| (Of_jsonaf_error "int_of_jsonaf: integer needed" (Number 1.)) |}]
     ;;
 
     let%expect_test _ =
@@ -1440,7 +1461,8 @@ module Exceptions = struct
          "ppx_jsonaf_test.ml.Exceptions.Variant.t_of_jsonaf: unexpected variant constructor"
          (Array (
            (String C)
-           (String string)))) |}]
+           (String string))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1450,15 +1472,14 @@ module Exceptions = struct
         {|
         (Of_jsonaf_error
          "ppx_jsonaf_test.ml.Exceptions.Variant.t_of_jsonaf: extra fields: b"
-         (Array ((String C) (Object ((b (Number 1))))))) |}]
+         (Array ((String C) (Object ((b (Number 1)))))))
+        |}]
     ;;
 
     let%expect_test _ =
       let wrong_arg_type = `Array [ `String "D"; `Number "1"; `Number "1." ] in
       require_does_raise [%here] (fun () -> t_of_jsonaf wrong_arg_type);
-      [%expect
-        {|
-        (Of_jsonaf_error "string_of_jsonaf: string needed" (Number 1.)) |}]
+      [%expect {| (Of_jsonaf_error "string_of_jsonaf: string needed" (Number 1.)) |}]
     ;;
 
     let%expect_test _ =
@@ -1472,7 +1493,8 @@ module Exceptions = struct
            (String D)
            (Array (
              (Number 1)
-             (Number 1.)))))) |}]
+             (Number 1.))))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1488,7 +1510,8 @@ module Exceptions = struct
            (String D)
            (Number 1)
            (Number 1.)
-           (String str)))) |}]
+           (String str))))
+        |}]
     ;;
   end
 
@@ -1507,23 +1530,20 @@ module Exceptions = struct
         {|
         (Of_jsonaf_error
          "ppx_jsonaf_test.ml.Exceptions.Sum.t_of_jsonaf: no matching variant found"
-         (Array ((String Z)))) |}]
+         (Array ((String Z))))
+        |}]
     ;;
 
     let%expect_test _ =
       let wrong_arg_type = `Array [ `String "B"; `Number "1." ] in
       require_does_raise [%here] (fun () -> t_of_jsonaf wrong_arg_type);
-      [%expect
-        {|
-        (Of_jsonaf_error "int_of_jsonaf: integer needed" (Number 1.)) |}]
+      [%expect {| (Of_jsonaf_error "int_of_jsonaf: integer needed" (Number 1.)) |}]
     ;;
 
     let%expect_test _ =
       let wrong_arg_type = `Array [ `String "D"; `Number "1"; `Number "1." ] in
       require_does_raise [%here] (fun () -> t_of_jsonaf wrong_arg_type);
-      [%expect
-        {|
-        (Of_jsonaf_error "string_of_jsonaf: string needed" (Number 1.)) |}]
+      [%expect {| (Of_jsonaf_error "string_of_jsonaf: string needed" (Number 1.)) |}]
     ;;
 
     let%expect_test _ =
@@ -1537,7 +1557,8 @@ module Exceptions = struct
            (String D)
            (Array (
              (Number 1)
-             (Number 1.)))))) |}]
+             (Number 1.))))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1553,7 +1574,8 @@ module Exceptions = struct
            (String D)
            (Number 1)
            (Number 1.)
-           (String str)))) |}]
+           (String str))))
+        |}]
     ;;
   end
 
@@ -1590,7 +1612,8 @@ module Exceptions = struct
            (c (Number 1.))
            (d Null)
            (e (Number 1))
-           (f (Number 1))))) |}]
+           (f (Number 1)))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1605,8 +1628,7 @@ module Exceptions = struct
           ]
       in
       require_does_raise [%here] (fun () -> t_of_jsonaf wrong_field_type);
-      [%expect {|
-        (Of_jsonaf_error "int_of_jsonaf: integer needed" (String A)) |}]
+      [%expect {| (Of_jsonaf_error "int_of_jsonaf: integer needed" (String A)) |}]
     ;;
 
     let%expect_test _ =
@@ -1621,7 +1643,8 @@ module Exceptions = struct
          (Object (
            (A (Number 1))
            (b (String str))
-           (c (Number 1.))))) |}]
+           (c (Number 1.)))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1648,7 +1671,8 @@ module Exceptions = struct
            (d Null)
            (e (Number 1))
            (f (Number 1))
-           (f (Number 1))))) |}]
+           (f (Number 1)))))
+        |}]
     ;;
 
     let%expect_test _ =
@@ -1675,7 +1699,8 @@ module Exceptions = struct
            (d Null)
            (e (Number 1))
            (f (Number 1))
-           (g (Number 1))))) |}]
+           (g (Number 1)))))
+        |}]
     ;;
   end
 end
@@ -1725,6 +1750,7 @@ module Bignum = struct
     [%expect
       {|
       (Number 0.333333333)
-      ((original (0.333333333 + 1/3000000000)) (parsed 0.333333333)) |}]
+      ((original (0.333333333 + 1/3000000000)) (parsed 0.333333333))
+      |}]
   ;;
 end
