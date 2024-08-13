@@ -13,8 +13,8 @@
 -|            Error { loc; txt = "ppx_yojson_conv: duplicate variable" })
 +|            Error { loc; txt = "ppx_jsonaf_conv: duplicate variable" })
 @|============================================================
--|      | [%type: [%t? _] yojson_opaque] -> ()
-+|      | [%type: [%t? _] jsonaf_opaque] -> ()
+-|       | [%type: [%t? _] yojson_opaque] -> ()
++|       | [%type: [%t? _] jsonaf_opaque] -> ()
 @|============================================================
 -|(* Generates the signature for type conversion to Yojsons *)
 -|module Sig_generate_yojson_of = struct
@@ -190,8 +190,8 @@
 -|  let yojson_of_default_field
 +|  let jsonaf_of_default_field
 @|============================================================
--|        ?yojson_of
-+|        ?jsonaf_of
+-|    ?yojson_of
++|    ?jsonaf_of
 @|============================================================
 -|      | `yojson ->
 -|        Inspect_yojson
@@ -200,27 +200,27 @@
 +|        Inspect_jsonaf
 +|          (fun ~cnv_expr loc jsonaf_expr ->
 @|============================================================
--|               Ppx_yojson_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e yojson_expr]])
-+|               Ppx_jsonaf_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e jsonaf_expr]])
+-|              Ppx_yojson_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e yojson_expr]])
++|              Ppx_jsonaf_conv_lib.poly_equal ([%e cnv_expr] [%e default]) [%e jsonaf_expr]])
 @|============================================================
 -|              Ppx_yojson_conv_lib.poly_equal [@ocaml.ppwarning
--|                "[@yojson_drop_default] is deprecated: \
+-|                                               "[@yojson_drop_default] is deprecated: \
 +|              Ppx_jsonaf_conv_lib.poly_equal [@ocaml.ppwarning
-+|                "[@jsonaf_drop_default] is deprecated: \
++|                                               "[@jsonaf_drop_default] is deprecated: \
 @|============================================================
--|                 - [@yojson_drop_default f] and give an \
-+|                 - [@jsonaf_drop_default f] and give an \
+-|                                                - [@yojson_drop_default f] and give an \
++|                                                - [@jsonaf_drop_default f] and give an \
 @|============================================================
--|                 - [@yojson_drop_default.compare] if the \
-+|                 - [@jsonaf_drop_default.compare] if the \
+-|                                                - [@yojson_drop_default.compare] if the \
++|                                                - [@jsonaf_drop_default.compare] if the \
 @|============================================================
--|                 - [@yojson_drop_default.equal] if the \
-+|                 - [@jsonaf_drop_default.equal] if the \
+-|                                                - [@yojson_drop_default.equal] if the \
++|                                                - [@jsonaf_drop_default.equal] if the \
 @|============================================================
--|                 - [@yojson_drop_default.yojson] if you \
--|                 want to compare the yojson \
-+|                 - [@jsonaf_drop_default.jsonaf] if you \
-+|                 want to compare the jsonaf \
+-|                                                - [@yojson_drop_default.yojson] if you \
+-|                                                want to compare the yojson \
++|                                                - [@jsonaf_drop_default.jsonaf] if you \
++|                                                want to compare the jsonaf \
 @|============================================================
 -|    yojson_of_record_field ~renaming patt expr name tp ?yojson_of is_empty key
 +|    jsonaf_of_record_field ~renaming patt expr name tp ?jsonaf_of is_empty key
@@ -253,8 +253,8 @@
 -|            (yojson_of_type ~typevar_handling:(`ok renaming) tp)
 +|            (jsonaf_of_type ~typevar_handling:(`ok renaming) tp)
 @|============================================================
--|      let bnds : (string * Ppx_yojson_conv_lib.Yojson.Safe.t) list = [] in
-+|      let bnds : (string * Ppx_jsonaf_conv_lib.Jsonaf_kernel.t) list = [] in
+-|        let bnds : (string * Ppx_yojson_conv_lib.Yojson.Safe.t) list = [] in
++|        let bnds : (string * Ppx_jsonaf_conv_lib.Jsonaf_kernel.t) list = [] in
 @|============================================================
 -|        yojson_of_label_declaration_list
 +|        jsonaf_of_label_declaration_list
@@ -263,14 +263,14 @@
 +|          ~wrap_expr:(fun expr -> [%expr `Array [ [%e cnstr_expr]; `Object [%e expr] ]])
 @|============================================================
 -|         ppat_construct ~loc constr_lid None --> [%expr `List [ `String [%e constr_str] ]]
--|       | args ->
--|         let yojson_of_args =
--|           List.map ~f:(yojson_of_type ~typevar_handling:(`ok renaming)) args
 +|         ppat_construct ~loc constr_lid None
 +|         --> [%expr `Array [ `String [%e constr_str] ]]
-+|       | args ->
+@|============================================================
+-|         let yojson_of_args =
 +|         let jsonaf_of_args =
-+|           List.map ~f:(jsonaf_of_type ~typevar_handling:(`ok renaming)) args
+@|============================================================
+-|               |> yojson_of_type ~typevar_handling:(`ok renaming))
++|               |> jsonaf_of_type ~typevar_handling:(`ok renaming))
 @|============================================================
 -|         let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc yojson_of_args in
 +|         let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc jsonaf_of_args in
@@ -415,11 +415,11 @@
 -|    ; [%pat? yojson]
 +|    ; [%pat? jsonaf]
 @|============================================================
--|        Ppx_yojson_conv_lib.Yojson_conv_error.tuple_of_size_n_expected
-+|        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.tuple_of_size_n_expected
+-|            Ppx_yojson_conv_lib.Yojson_conv_error.tuple_of_size_n_expected
++|            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.tuple_of_size_n_expected
 @|============================================================
--|          yojson]
-+|          jsonaf]
+-|              yojson]
++|              jsonaf]
 @|============================================================
 -|    let func_expr = type_of_yojson ~typevar_handling ~internal:true inh in
 +|    let func_expr = type_of_jsonaf ~typevar_handling ~internal:true inh in
@@ -456,30 +456,30 @@
 -|    ; [%pat? `List (`List _ :: _) as yojson]
 +|    ; [%pat? `Array (`Array _ :: _) as jsonaf]
 @|============================================================
--|        Ppx_yojson_conv_lib.Yojson_conv_error.nested_list_invalid_poly_var
-+|        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_poly_var
+-|            Ppx_yojson_conv_lib.Yojson_conv_error.nested_list_invalid_poly_var
++|            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_poly_var
 @|============================================================
--|          yojson]
+-|              yojson]
 -|    ; [%pat? `List [] as yojson]
-+|          jsonaf]
++|              jsonaf]
 +|    ; [%pat? `Array [] as jsonaf]
 @|============================================================
--|        Ppx_yojson_conv_lib.Yojson_conv_error.empty_list_invalid_poly_var
-+|        Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_poly_var
+-|            Ppx_yojson_conv_lib.Yojson_conv_error.empty_list_invalid_poly_var
++|            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_poly_var
 @|============================================================
--|          yojson]
+-|              yojson]
 -|    ; [%pat? _ as yojson]
 -|      --> [%expr Ppx_yojson_conv_lib.Yojson_conv_error.unexpected_stag _tp_loc yojson]
-+|          jsonaf]
++|              jsonaf]
 +|    ; [%pat? _ as jsonaf]
 +|      --> [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
 @|============================================================
 -|  and variant_of_yojson ~typevar_handling ?full_type (loc, row_fields) =
 +|  and variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields) =
 @|============================================================
--|                  (type_of_yojson ~typevar_handling ~internal:true inh)]
+-|                   (type_of_yojson ~typevar_handling ~internal:true inh)]
 -|                 yojson
-+|                  (type_of_jsonaf ~typevar_handling ~internal:true inh)]
++|                   (type_of_jsonaf ~typevar_handling ~internal:true inh)]
 +|                 jsonaf
 @|============================================================
 -|                pexp_match ~loc [%expr yojson] rftag_matches
@@ -528,17 +528,17 @@
 +|               [%expr _field_jsonaf]
 +|               (type_of_jsonaf ~typevar_handling tp)
 @|============================================================
--|                match Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
--|                | Ppx_yojson_conv_lib.Option.None ->
-+|                match Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
-+|                | Ppx_jsonaf_conv_lib.Option.None ->
+-|                    match Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
+-|                    | Ppx_yojson_conv_lib.Option.None ->
++|                    match Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
++|                    | Ppx_jsonaf_conv_lib.Option.None ->
 @|============================================================
--|                  := Ppx_yojson_conv_lib.Option.Some fvalue
--|                | Ppx_yojson_conv_lib.Option.Some _ ->
--|                  duplicates := field_name :: Ppx_yojson_conv_lib.( ! ) duplicates])
-+|                  := Ppx_jsonaf_conv_lib.Option.Some fvalue
-+|                | Ppx_jsonaf_conv_lib.Option.Some _ ->
-+|                  duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
+-|                      := Ppx_yojson_conv_lib.Option.Some fvalue
+-|                    | Ppx_yojson_conv_lib.Option.Some _ ->
+-|                      duplicates := field_name :: Ppx_yojson_conv_lib.( ! ) duplicates])
++|                      := Ppx_jsonaf_conv_lib.Option.Some fvalue
++|                    | Ppx_jsonaf_conv_lib.Option.Some _ ->
++|                      duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
 @|============================================================
 -|             if Ppx_yojson_conv_lib.( ! )
 -|                  Ppx_yojson_conv_lib.Yojson_conv.record_check_extra_fields
@@ -555,8 +555,8 @@
 +|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
 +|            | Some (`default _ | `jsonaf_option _) -> mk_default loc
 @|============================================================
--|                Ppx_yojson_conv_lib.poly_equal [%e fld] Ppx_yojson_conv_lib.Option.None
-+|                Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
+-|                  Ppx_yojson_conv_lib.poly_equal [%e fld] Ppx_yojson_conv_lib.Option.None
++|                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
 @|============================================================
 -|              , [%pat? Ppx_yojson_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
 +|              , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
@@ -571,11 +571,11 @@
 +|                | Ppx_jsonaf_conv_lib.Option.Some v -> v]
 +|            | Some (`jsonaf_option _) | None -> evar ~loc (nm ^ "_value")
 @|============================================================
--|            Ppx_yojson_conv_lib.Yojson_conv_error.record_undefined_elements
-+|            Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_undefined_elements
+-|                Ppx_yojson_conv_lib.Yojson_conv_error.record_undefined_elements
++|                Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_undefined_elements
 @|============================================================
--|              yojson
-+|              jsonaf
+-|                  yojson
++|                  jsonaf
 @|============================================================
 -|              [ [%pat? (field_name, _field_yojson) :: tail]
 +|              [ [%pat? (field_name, _field_jsonaf) :: tail]
@@ -618,11 +618,11 @@
 -|      ; [%pat? _ as yojson]
 +|      ; [%pat? _ as jsonaf]
 @|============================================================
--|          Ppx_yojson_conv_lib.Yojson_conv_error.record_list_instead_atom
-+|          Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_list_instead_atom
+-|              Ppx_yojson_conv_lib.Yojson_conv_error.record_list_instead_atom
++|              Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_list_instead_atom
 @|============================================================
--|            yojson]
-+|            jsonaf]
+-|                yojson]
++|                jsonaf]
 @|============================================================
 -|  (* Generate matching code for well-formed Yojsons wrt. sum types *)
 +|  (* Generate matching code for well-formed Jsonaf_kernels wrt. sum types *)
@@ -630,16 +630,16 @@
 -|          label_declaration_list_of_yojson
 +|          label_declaration_list_of_jsonaf
 @|============================================================
--|               `List [ `String ([%p pstring ~loc cnstr_name] as _tag); `Assoc field_yojsons ]
+-|          `List [ `String ([%p pstring ~loc cnstr_name] as _tag); `Assoc field_yojsons ]
 -|          as yojson]
-+|               `Array [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ]
++|          `Array [ `String ([%p pstring ~loc cnstr_name] as _tag); `Object field_jsonafs ]
 +|          as jsonaf]
 @|============================================================
 -|        [%pat? `List [ `String [%p pstring ~loc cnstr_name] ]]
 +|        [%pat? `Array [ `String [%p pstring ~loc cnstr_name] ]]
 @|============================================================
--|               `List (`String ([%p pstring ~loc cnstr_name] as _tag) :: yojson_args) as _yojson]
-+|               `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as
+-|          `List (`String ([%p pstring ~loc cnstr_name] as _tag) :: yojson_args) as _yojson]
++|          `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as
 +|          _jsonaf]
 @|============================================================
 -|  (* Generate matching code for malformed Yojsons with good tags
@@ -662,24 +662,24 @@
 -|         ; [ [%pat? `List (`List _ :: _) as yojson]
 +|         ; [ [%pat? `Array (`Array _ :: _) as jsonaf]
 @|============================================================
--|               Ppx_yojson_conv_lib.Yojson_conv_error.nested_list_invalid_sum
-+|               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_sum
+-|                   Ppx_yojson_conv_lib.Yojson_conv_error.nested_list_invalid_sum
++|                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.nested_list_invalid_sum
 @|============================================================
--|                 yojson]
+-|                     yojson]
 -|           ; [%pat? `List [] as yojson]
-+|                 jsonaf]
++|                     jsonaf]
 +|           ; [%pat? `Array [] as jsonaf]
 @|============================================================
--|               Ppx_yojson_conv_lib.Yojson_conv_error.empty_list_invalid_sum
-+|               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_sum
+-|                   Ppx_yojson_conv_lib.Yojson_conv_error.empty_list_invalid_sum
++|                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_list_invalid_sum
 @|============================================================
--|                 yojson]
+-|                     yojson]
 -|           ; [%pat? _ as yojson]
-+|                 jsonaf]
++|                     jsonaf]
 +|           ; [%pat? _ as jsonaf]
 @|============================================================
--|               Ppx_yojson_conv_lib.Yojson_conv_error.unexpected_stag _tp_loc yojson]
-+|               Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
+-|                   Ppx_yojson_conv_lib.Yojson_conv_error.unexpected_stag _tp_loc yojson]
++|                   Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
 @|============================================================
 -|  let nil_of_yojson loc : Fun_or_match.t =
 +|  let nil_of_jsonaf loc : Fun_or_match.t =
@@ -719,11 +719,11 @@
 -|            [ [%pat? Ppx_yojson_conv_lib.Yojson_conv_error.No_variant_match]
 +|            [ [%pat? Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match]
 @|============================================================
--|                Ppx_yojson_conv_lib.Yojson_conv_error.no_matching_variant_found
-+|                Ppx_jsonaf_conv_lib.Jsonaf_conv_error.no_matching_variant_found
+-|                    Ppx_yojson_conv_lib.Yojson_conv_error.no_matching_variant_found
++|                    Ppx_jsonaf_conv_lib.Jsonaf_conv_error.no_matching_variant_found
 @|============================================================
--|                  yojson]
-+|                  jsonaf]
+-|                      yojson]
++|                      jsonaf]
 @|============================================================
 -|            eapply ~loc internal_expr (arg_exprs @ [ [%expr yojson] ])
 +|            eapply ~loc internal_expr (arg_exprs @ [ [%expr jsonaf] ])

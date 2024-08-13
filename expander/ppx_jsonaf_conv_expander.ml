@@ -788,7 +788,11 @@ module Str_generate_jsonaf_of = struct
          --> [%expr `Array [ `String [%e constr_str] ]]
        | args ->
          let jsonaf_of_args =
-           List.map ~f:(jsonaf_of_type ~typevar_handling:(`ok renaming)) args
+           List.map
+             ~f:(fun arg ->
+               Ppxlib_jane.Shim.Pcstr_tuple_arg.to_core_type arg
+               |> jsonaf_of_type ~typevar_handling:(`ok renaming))
+             args
          in
          let cnstr_expr = [%expr `String [%e constr_str]] in
          let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc jsonaf_of_args in
@@ -1425,7 +1429,10 @@ module Str_generate_of_jsonaf = struct
         flds
         expr_ref_inits
         ~f:(fun { pld_name = { txt = name; loc }; _ } init ->
-        value_binding ~loc ~pat:(pvar ~loc (name ^ "_field")) ~expr:[%expr ref [%e init]])
+          value_binding
+            ~loc
+            ~pat:(pvar ~loc (name ^ "_field"))
+            ~expr:[%expr ref [%e init]])
     in
     pexp_let
       ~loc
@@ -1550,7 +1557,8 @@ module Str_generate_of_jsonaf = struct
         Attrs.fail_if_allow_extra_field_cd ~loc cd;
         [%pat? `Array [ `String [%p pstring ~loc cnstr_name] ]]
         --> pexp_construct ~loc (Located.lident ~loc cnstr_label) None
-      | { pcd_args = Pcstr_tuple (_ :: _ as tps); _ } ->
+      | { pcd_args = Pcstr_tuple (_ :: _ as args); _ } ->
+        let tps = List.map args ~f:Ppxlib_jane.Shim.Pcstr_tuple_arg.to_core_type in
         Attrs.fail_if_allow_extra_field_cd ~loc cd;
         [%pat?
           `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as

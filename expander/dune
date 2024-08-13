@@ -1,7 +1,7 @@
 (library
  (name ppx_jsonaf_conv_expander)
  (public_name ppx_jsonaf_conv.expander)
- (libraries base ppxlib)
+ (libraries base ppxlib ppxlib_jane)
  (ppx_runtime_libraries ppx_jsonaf_conv.runtime-lib)
  (preprocess
   (pps ppxlib.metaquot)))
