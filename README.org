@@ -131,6 +131,23 @@ The following examples show how this works.
   { x = None  ; y = None;   } => {"x":null}
 #+end_src
 
+The attribute =jsonaf.list= indicates that a record field could be ommitted if
+it is empty.
+
+#+begin_src ocaml
+  type t =
+    { x : int list;
+      y : int list [@jsonaf.list];
+    } [@@deriving jsonaf]
+#+end_src
+
+The following examples show how this works.
+
+#+begin_src ocaml
+  { x = [1]; y = [2]; } => {"x":[1],"y":[2]}
+  { x = [] ; y = [];   } => {"x":[]}
+#+end_src
+
 
 When the JSON object keys differ from the ocaml field names, users can
 specify the corresponding JSON key implicitly using =[@key "field"]=,

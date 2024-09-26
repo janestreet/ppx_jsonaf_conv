@@ -61,6 +61,14 @@ let option =
     ()
 ;;
 
+let list =
+  Attribute.declare
+    "jsonaf.list"
+    Attribute.Context.label_declaration
+    Ast_pattern.(pstr nil)
+    ()
+;;
+
 let allow_extra_fields_td =
   Attribute.declare
     "jsonaf.allow_extra_fields"
@@ -138,7 +146,10 @@ let fail_if_allow_extra_field_td ~loc x =
 ;;
 
 module Record_field_handler = struct
-  type common = [ `jsonaf_option of core_type ]
+  type common =
+    [ `jsonaf_option of core_type
+    | `jsonaf_list
+    ]
 
   let get_attribute attr ld ~f =
     Option.map (Attribute.get attr ld) ~f:(fun x -> f x, Attribute.name attr)
@@ -152,6 +163,13 @@ module Record_field_handler = struct
             (match ld.pld_type with
              | [%type: [%t? ty] option] -> Some (`jsonaf_option ty, "[@jsonaf.option]")
              | _ -> invalid_attribute ~loc option "_ option")
+          | None -> None)
+      ; (fun ld ->
+          match Attribute.get list ld with
+          | Some () ->
+            (match ld.pld_type with
+             | [%type: [%t? _] list] -> Some (`jsonaf_list, "[@jsonaf.list]")
+             | _ -> invalid_attribute ~loc list "_ list")
           | None -> None)
       ]
     in

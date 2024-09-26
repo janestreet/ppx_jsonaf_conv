@@ -73,40 +73,70 @@
 -|  let rec yojson_of_type
 +|  let rec jsonaf_of_type
 @|============================================================
--|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
-+|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
+-|    match Ppxlib_jane.Shim.Core_type.of_parsetree typ with
++|    match typ with
 @|============================================================
--|    | [%type: [%t? _] yojson_opaque] ->
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
+-|    | { ptyp_desc = Ptyp_any; _ } -> Fun [%expr fun _ -> `String "_"]
+-|    | { ptyp_desc = Ptyp_tuple tp; _ } ->
+-|      Match [ yojson_of_tuple ~typevar_handling (loc, tp) ]
+-|    | { ptyp_desc = Ptyp_var parm; _ } ->
++|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
++|    | [%type: _] -> Fun [%expr fun _ -> `String "_"]
 +|    | [%type: [%t? _] jsonaf_opaque] ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
-@|============================================================
--|      Match [ yojson_of_tuple ~typevar_handling (loc, tp) ]
-+|      Match [ jsonaf_of_tuple ~typevar_handling (loc, tp) ]
++|    | _ ->
++|      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
++|       | Ptyp_tuple tp -> Match [ jsonaf_of_tuple ~typevar_handling (loc, tp) ]
++|       | Ptyp_var parm ->
 @|============================================================
 -|           "Type variables not allowed in [%%yojson_of: ]. Please use locally abstract \
-+|           "Type variables not allowed in [%%jsonaf_of: ]. Please use locally abstract \
+-|            types instead."
++|              "Type variables not allowed in [%%jsonaf_of: ]. Please use locally \
++|               abstract types instead."
 @|============================================================
 -|          | Existentially_bound -> yojson_of_type ~typevar_handling [%type: _]))
-+|          | Existentially_bound -> jsonaf_of_type ~typevar_handling [%type: _]))
+-|    | { ptyp_desc = Ptyp_constr (id, args); _ } ->
+-|      (match typ with
+-|       | [%type: [%t? _] yojson_opaque] ->
+-|         Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
+-|       | _ ->
++|             | Existentially_bound -> jsonaf_of_type ~typevar_handling [%type: _]))
++|       | Ptyp_constr (id, args) ->
 @|============================================================
--|        (yojson_of_type_constr
-+|        (jsonaf_of_type_constr
+-|           (yojson_of_type_constr
++|           (jsonaf_of_type_constr
 @|============================================================
--|              Fun_or_match.expr ~loc (yojson_of_type ~typevar_handling tp))))
-+|              Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling tp))))
+-|                 Fun_or_match.expr ~loc (yojson_of_type ~typevar_handling tp)))))
+-|    | { ptyp_desc = Ptyp_arrow (_, _, _, _, _); _ } ->
++|                 Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling tp))))
++|       | Ptyp_arrow (_, _, _, _, _) ->
 @|============================================================
 -|            Ppx_yojson_conv_lib.Yojson_conv.yojson_of_fun Ppx_yojson_conv_lib.ignore]
-+|            Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_fun Ppx_jsonaf_conv_lib.ignore]
-@|============================================================
+-|    | { ptyp_desc = Ptyp_variant (row_fields, _, _); _ } ->
 -|      yojson_of_variant ~typevar_handling (loc, row_fields)
-+|      jsonaf_of_variant ~typevar_handling (loc, row_fields)
-@|============================================================
+-|    | { ptyp_desc = Ptyp_poly (parms, poly_tp); _ } ->
 -|      yojson_of_poly ~typevar_handling parms poly_tp
-+|      jsonaf_of_poly ~typevar_handling parms poly_tp
-@|============================================================
+-|    | { ptyp_desc = Ptyp_unboxed_tuple _; _ }
+-|    | { ptyp_desc = Ptyp_object (_, _); _ }
+-|    | { ptyp_desc = Ptyp_class (_, _); _ }
+-|    | { ptyp_desc = Ptyp_alias (_, _); _ }
+-|    | { ptyp_desc = Ptyp_package _; _ }
+-|    | { ptyp_desc = Ptyp_extension _; _ } ->
 -|      Location.raise_errorf ~loc "Type unsupported for ppx [yojson_of] conversion"
-+|      Location.raise_errorf ~loc "Type unsupported for ppx [jsonaf_of] conversion"
++|               Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_fun Ppx_jsonaf_conv_lib.ignore]
++|       | Ptyp_variant (row_fields, _, _) ->
++|         jsonaf_of_variant ~typevar_handling (loc, row_fields)
++|       | Ptyp_poly (parms, poly_tp) -> jsonaf_of_poly ~typevar_handling parms poly_tp
++|       | Ptyp_unboxed_tuple _
++|       | Ptyp_object (_, _)
++|       | Ptyp_class (_, _)
++|       | Ptyp_alias (_, _)
++|       | Ptyp_package _ | Ptyp_extension _ ->
++|         Location.raise_errorf ~loc "Type unsupported for ppx [jsonaf_of] conversion"
++|       | Ptyp_any ->
++|         (* This case is matched in the outer match *)
++|         failwith "impossible state")
 @|============================================================
 -|  and yojson_of_tuple ~typevar_handling (loc, tps) =
 -|    let fps = List.map ~f:(fun tp -> yojson_of_type ~typevar_handling tp) tps in
@@ -243,6 +273,28 @@
 -|              | Ppx_yojson_conv_lib.Option.Some v ->
 +|              | Ppx_jsonaf_conv_lib.Option.None -> bnds
 +|              | Ppx_jsonaf_conv_lib.Option.Some v ->
++|                let arg = [%e cnv_expr] in
++|                let bnd = [%e estring ~loc key], arg in
++|                bnd :: bnds
++|            in
++|            [%e expr]]
++|        in
++|        patt, expr
++|      | `jsonaf_list ->
++|        let patt = mk_rec_patt loc patt name in
++|        let vname = [%expr v] in
++|        let cnv_expr =
++|          Fun_or_match.unroll
++|            ~loc
++|            vname
++|            (jsonaf_of_type ~typevar_handling:(`ok renaming) ld.pld_type)
++|        in
++|        let expr =
++|          [%expr
++|            let bnds =
++|              match [%e evar ~loc ("v_" ^ name)] with
++|              | [] -> bnds
++|              | v ->
 @|============================================================
 -|           yojson_of_default_field
 +|           jsonaf_of_default_field
@@ -376,33 +428,56 @@
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.opaque_of_yojson]
 -|    | [%type: [%t? _] yojson_opaque] | [%type: _] ->
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.opaque_of_yojson]
+-|    | { ptyp_desc = Ptyp_tuple tp; _ } ->
+-|      Match (tuple_of_yojson ~typevar_handling (loc, tp))
+-|    | { ptyp_desc = Ptyp_var parm; _ } ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
 +|    | [%type: [%t? _] jsonaf_opaque] | [%type: _] ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
-@|============================================================
--|      Match (tuple_of_yojson ~typevar_handling (loc, tp))
-+|      Match (tuple_of_jsonaf ~typevar_handling (loc, tp))
++|    | _ ->
++|      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
++|       | Ptyp_tuple tp -> Match (tuple_of_jsonaf ~typevar_handling (loc, tp))
++|       | Ptyp_var parm ->
 @|============================================================
 -|           "Type variables not allowed in [%%of_yojson: ]. Please use locally abstract \
-+|           "Type variables not allowed in [%%of_jsonaf: ]. Please use locally abstract \
+-|            types instead.")
+-|    | { ptyp_desc = Ptyp_constr (id, args); _ } ->
++|              "Type variables not allowed in [%%of_jsonaf: ]. Please use locally \
++|               abstract types instead.")
++|       | Ptyp_constr (id, args) ->
 @|============================================================
 -|          Fun_or_match.expr ~loc (type_of_yojson ~typevar_handling arg))
-+|          Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling arg))
++|             Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling arg))
 @|============================================================
 -|      Fun (type_constr_of_yojson ~loc ~internal id args)
-+|      Fun (type_constr_of_jsonaf ~loc ~internal id args)
-@|============================================================
+-|    | { ptyp_desc = Ptyp_arrow (_, _, _, _, _); _ } ->
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.fun_of_yojson]
-+|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.fun_of_jsonaf]
-@|============================================================
+-|    | { ptyp_desc = Ptyp_variant (row_fields, _, _); _ } ->
 -|      variant_of_yojson ~typevar_handling ?full_type (loc, row_fields)
-+|      variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
-@|============================================================
+-|    | { ptyp_desc = Ptyp_poly (parms, poly_tp); _ } ->
 -|      poly_of_yojson ~typevar_handling parms poly_tp
-+|      poly_of_jsonaf ~typevar_handling parms poly_tp
-@|============================================================
+-|    | { ptyp_desc = Ptyp_unboxed_tuple _; _ }
+-|    | { ptyp_desc = Ptyp_object (_, _); _ }
+-|    | { ptyp_desc = Ptyp_class (_, _); _ }
+-|    | { ptyp_desc = Ptyp_alias (_, _); _ }
+-|    | { ptyp_desc = Ptyp_package _; _ }
+-|    | { ptyp_desc = Ptyp_extension _; _ } ->
 -|      Location.raise_errorf ~loc "Type unsupported for ppx [of_yojson] conversion"
-+|      Location.raise_errorf ~loc "Type unsupported for ppx [of_jsonaf] conversion"
++|         Fun (type_constr_of_jsonaf ~loc ~internal id args)
++|       | Ptyp_arrow (_, _, _, _, _) ->
++|         Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.fun_of_jsonaf]
++|       | Ptyp_variant (row_fields, _, _) ->
++|         variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
++|       | Ptyp_poly (parms, poly_tp) -> poly_of_jsonaf ~typevar_handling parms poly_tp
++|       | Ptyp_unboxed_tuple _
++|       | Ptyp_object (_, _)
++|       | Ptyp_class (_, _)
++|       | Ptyp_alias (_, _)
++|       | Ptyp_package _ | Ptyp_extension _ ->
++|         Location.raise_errorf ~loc "Type unsupported for ppx [of_jsonaf] conversion"
++|       | Ptyp_any ->
++|         (* This case is matched in the outer match *)
++|         failwith "impossible state")
 @|============================================================
 -|  and tuple_of_yojson ~typevar_handling (loc, tps) =
 -|    let fps = List.map ~f:(type_of_yojson ~typevar_handling) tps in
@@ -520,7 +595,9 @@
 -|           let inits = [%expr Ppx_yojson_conv_lib.Option.None] :: inits in
 +|        let key = Option.value ~default:nm (Attribute.get Attrs.jsonaf_key ld) in
 +|        (match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld, ld.pld_type with
-+|         | Some (`jsonaf_option tp), _ | (None | Some (`default _)), tp ->
++|         | Some (`jsonaf_option tp), _
++|         | (None | Some (`default _)), tp
++|         | Some `jsonaf_list, tp ->
 +|           let inits = [%expr Ppx_jsonaf_conv_lib.Option.None] :: inits in
 @|============================================================
 -|               [%expr _field_yojson]
@@ -553,7 +630,7 @@
 -|            match Attrs.Record_field_handler.Of_yojson.create ~loc ld with
 -|            | Some (`default _ | `yojson_option _) -> mk_default loc
 +|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
-+|            | Some (`default _ | `jsonaf_option _) -> mk_default loc
++|            | Some (`default _ | `jsonaf_option _ | `jsonaf_list) -> mk_default loc
 @|============================================================
 -|                  Ppx_yojson_conv_lib.poly_equal [%e fld] Ppx_yojson_conv_lib.Option.None
 +|                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
@@ -568,6 +645,11 @@
 -|                | Ppx_yojson_conv_lib.Option.Some v -> v]
 -|            | Some (`yojson_option _) | None -> evar ~loc (nm ^ "_value")
 +|                | Ppx_jsonaf_conv_lib.Option.None -> [%e default]
++|                | Ppx_jsonaf_conv_lib.Option.Some v -> v]
++|            | Some `jsonaf_list ->
++|              [%expr
++|                match [%e evar ~loc (nm ^ "_value")] with
++|                | Ppx_jsonaf_conv_lib.Option.None -> []
 +|                | Ppx_jsonaf_conv_lib.Option.Some v -> v]
 +|            | Some (`jsonaf_option _) | None -> evar ~loc (nm ^ "_value")
 @|============================================================
