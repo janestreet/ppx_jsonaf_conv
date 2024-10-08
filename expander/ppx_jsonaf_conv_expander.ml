@@ -408,15 +408,14 @@ module Str_generate_jsonaf_of = struct
        | Ptyp_variant (row_fields, _, _) ->
          jsonaf_of_variant ~typevar_handling (loc, row_fields)
        | Ptyp_poly (parms, poly_tp) -> jsonaf_of_poly ~typevar_handling parms poly_tp
-       | Ptyp_unboxed_tuple _
-       | Ptyp_object (_, _)
-       | Ptyp_class (_, _)
-       | Ptyp_alias (_, _)
-       | Ptyp_package _ | Ptyp_extension _ ->
-         Location.raise_errorf ~loc "Type unsupported for ppx [jsonaf_of] conversion"
        | Ptyp_any ->
          (* This case is matched in the outer match *)
-         failwith "impossible state")
+         failwith "impossible state"
+       | desc ->
+         Location.raise_errorf
+           ~loc
+           "Type unsupported for ppx [jsonaf_of] conversion (%s)"
+           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 
   (* Conversion of tuples *)
   and jsonaf_of_tuple ~typevar_handling (loc, tps) =
@@ -1071,15 +1070,14 @@ module Str_generate_of_jsonaf = struct
        | Ptyp_variant (row_fields, _, _) ->
          variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
        | Ptyp_poly (parms, poly_tp) -> poly_of_jsonaf ~typevar_handling parms poly_tp
-       | Ptyp_unboxed_tuple _
-       | Ptyp_object (_, _)
-       | Ptyp_class (_, _)
-       | Ptyp_alias (_, _)
-       | Ptyp_package _ | Ptyp_extension _ ->
-         Location.raise_errorf ~loc "Type unsupported for ppx [of_jsonaf] conversion"
        | Ptyp_any ->
          (* This case is matched in the outer match *)
-         failwith "impossible state")
+         failwith "impossible state"
+       | desc ->
+         Location.raise_errorf
+           ~loc
+           "Type unsupported for ppx [of_jsonaf] conversion (%s)"
+           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 
   (* Conversion of tuples *)
   and tuple_of_jsonaf ~typevar_handling (loc, tps) =
