@@ -15,7 +15,10 @@ val fail_if_allow_extra_field_cd : loc:Location.t -> constructor_declaration -> 
 val fail_if_allow_extra_field_td : loc:Location.t -> type_declaration -> unit
 
 module Record_field_handler : sig
-  type common = [ `jsonaf_option of core_type ]
+  type common =
+    [ `jsonaf_option of core_type
+    | `jsonaf_list
+    ]
 
   module Of_jsonaf : sig
     type t =

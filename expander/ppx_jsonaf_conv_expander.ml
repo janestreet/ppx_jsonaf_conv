@@ -74,7 +74,7 @@ module Renaming : sig
   type t
 
   val identity : t
-  val add_universally_bound : t -> string loc -> t
+  val add_universally_bound : t -> string loc * Ppxlib_jane.jkind_annotation option -> t
 
   type binding_kind =
     | Universally_bound of string
@@ -92,7 +92,7 @@ end = struct
     | Universally_bound of string
     | Existentially_bound
 
-  let add_universally_bound (t : t) name : t =
+  let add_universally_bound (t : t) (name, _) : t =
     let name = name.txt in
     match t with
     | None -> None
@@ -137,8 +137,8 @@ end = struct
         inherit [(string, error) Result.t Map.M(String).t] Ast_traverse.fold as super
 
         method! core_type ty map =
-          match ty.ptyp_desc with
-          | Ptyp_var var ->
+          match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ty.ptyp_desc with
+          | Ptyp_var (var, _) ->
             let error =
               { loc = ty.ptyp_loc
               ; txt =
@@ -150,8 +150,8 @@ end = struct
       end
     in
     let aux map tp_name tp_in_return_type =
-      match tp_in_return_type.ptyp_desc with
-      | Ptyp_var var ->
+      match Ppxlib_jane.Shim.Core_type_desc.of_parsetree tp_in_return_type.ptyp_desc with
+      | Ptyp_var (var, _) ->
         let data =
           if Map.mem map var
           then (
@@ -188,10 +188,11 @@ let replace_variables_by_underscores =
     object
       inherit Ast_traverse.map as super
 
-      method! core_type_desc =
-        function
-        | Ptyp_var _ -> Ptyp_any
-        | t -> super#core_type_desc t
+      method! core_type_desc t =
+        match Ppxlib_jane.Shim.Core_type_desc.of_parsetree t with
+        | Ptyp_var (_, jkind) ->
+          Ppxlib_jane.Shim.Core_type_desc.to_parsetree (Ptyp_any jkind)
+        | _ -> super#core_type_desc t
     end
   in
   map#core_type
@@ -211,10 +212,10 @@ let make_type_rigid ~type_name =
 
       method! core_type ty =
         let ptyp_desc =
-          match ty.ptyp_desc with
-          | Ptyp_var s ->
+          match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ty.ptyp_desc with
+          | Ptyp_var (s, _) ->
             Ptyp_constr (Located.lident ~loc:ty.ptyp_loc (rigid_type_var ~type_name s), [])
-          | desc -> super#core_type_desc desc
+          | _ -> super#core_type_desc ty.ptyp_desc
         in
         { ty with ptyp_desc }
     end
@@ -235,8 +236,8 @@ let tvars_of_core_type : core_type -> string list =
       inherit [string list] Ast_traverse.fold as super
 
       method! core_type x acc =
-        match x.ptyp_desc with
-        | Ptyp_var x -> if List.mem acc x ~equal:String.equal then acc else x :: acc
+        match Ppxlib_jane.Shim.Core_type_desc.of_parsetree x.ptyp_desc with
+        | Ptyp_var (x, _) -> if List.mem acc x ~equal:String.equal then acc else x :: acc
         | _ -> super#core_type x acc
     end
   in
@@ -379,41 +380,49 @@ module Str_generate_jsonaf_of = struct
     | [%type: _] -> Fun [%expr fun _ -> `String "_"]
     | [%type: [%t? _] jsonaf_opaque] ->
       Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
-    | { ptyp_desc = Ptyp_tuple tp; _ } ->
-      Match [ jsonaf_of_tuple ~typevar_handling (loc, tp) ]
-    | { ptyp_desc = Ptyp_var parm; _ } ->
-      (match typevar_handling with
-       | `disallowed_in_type_expr ->
+    | _ ->
+      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
+       | Ptyp_tuple labeled_tps ->
+         (match Ppxlib_jane.as_unlabeled_tuple labeled_tps with
+          | Some tps -> Match [ jsonaf_of_tuple ~typevar_handling (loc, tps) ]
+          | None ->
+            Location.raise_errorf
+              ~loc
+              "Labeled tuples unsupported for ppx [jsonaf_of] conversion")
+       | Ptyp_var (parm, _) ->
+         (match typevar_handling with
+          | `disallowed_in_type_expr ->
+            Location.raise_errorf
+              ~loc
+              "Type variables not allowed in [%%jsonaf_of: ]. Please use locally \
+               abstract types instead."
+          | `ok renaming ->
+            (match Renaming.binding_kind renaming parm with
+             | Universally_bound parm -> Fun (evar ~loc ("_of_" ^ parm))
+             | Existentially_bound -> jsonaf_of_type ~typevar_handling [%type: _]))
+       | Ptyp_constr (id, args) ->
+         Fun
+           (jsonaf_of_type_constr
+              ~loc
+              id
+              (List.map args ~f:(fun tp ->
+                 Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling tp))))
+       | Ptyp_arrow (_, _, _, _, _) ->
+         Fun
+           [%expr
+             fun _f ->
+               Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_fun Ppx_jsonaf_conv_lib.ignore]
+       | Ptyp_variant (row_fields, _, _) ->
+         jsonaf_of_variant ~typevar_handling (loc, row_fields)
+       | Ptyp_poly (parms, poly_tp) -> jsonaf_of_poly ~typevar_handling parms poly_tp
+       | Ptyp_any _ ->
+         (* This case is matched in the outer match *)
+         failwith "impossible state"
+       | desc ->
          Location.raise_errorf
            ~loc
-           "Type variables not allowed in [%%jsonaf_of: ]. Please use locally abstract \
-            types instead."
-       | `ok renaming ->
-         (match Renaming.binding_kind renaming parm with
-          | Universally_bound parm -> Fun (evar ~loc ("_of_" ^ parm))
-          | Existentially_bound -> jsonaf_of_type ~typevar_handling [%type: _]))
-    | { ptyp_desc = Ptyp_constr (id, args); _ } ->
-      Fun
-        (jsonaf_of_type_constr
-           ~loc
-           id
-           (List.map args ~f:(fun tp ->
-              Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling tp))))
-    | { ptyp_desc = Ptyp_arrow (_, _, _); _ } ->
-      Fun
-        [%expr
-          fun _f ->
-            Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_fun Ppx_jsonaf_conv_lib.ignore]
-    | { ptyp_desc = Ptyp_variant (row_fields, _, _); _ } ->
-      jsonaf_of_variant ~typevar_handling (loc, row_fields)
-    | { ptyp_desc = Ptyp_poly (parms, poly_tp); _ } ->
-      jsonaf_of_poly ~typevar_handling parms poly_tp
-    | { ptyp_desc = Ptyp_object (_, _); _ }
-    | { ptyp_desc = Ptyp_class (_, _); _ }
-    | { ptyp_desc = Ptyp_alias (_, _); _ }
-    | { ptyp_desc = Ptyp_package _; _ }
-    | { ptyp_desc = Ptyp_extension _; _ } ->
-      Location.raise_errorf ~loc "Type unsupported for ppx [jsonaf_of] conversion"
+           "Type unsupported for ppx [jsonaf_of] conversion (%s)"
+           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 
   (* Conversion of tuples *)
   and jsonaf_of_tuple ~typevar_handling (loc, tps) =
@@ -439,8 +448,11 @@ module Str_generate_jsonaf_of = struct
       | Rtag (cnstr, false, [ tp ]) ->
         let label = Label_with_name.create ~label:cnstr.txt ~name_override in
         let args =
-          match tp.ptyp_desc with
-          | Ptyp_tuple tps -> tps
+          match Ppxlib_jane.Shim.Core_type_desc.of_parsetree tp.ptyp_desc with
+          | Ptyp_tuple labeled_tps ->
+            (match Ppxlib_jane.as_unlabeled_tuple labeled_tps with
+             | Some tps -> tps
+             | None -> [ tp ])
           | _ -> [ tp ]
         in
         let cnstr_expr = [%expr `String [%e estring ~loc (Label_with_name.name label)]] in
@@ -482,7 +494,7 @@ module Str_generate_jsonaf_of = struct
       Location.raise_errorf ~loc "polymorphic type in a type expression"
     | `ok renaming ->
       let bindings =
-        let mk_binding parm =
+        let mk_binding (parm, _) =
           value_binding
             ~loc
             ~pat:(pvar ~loc ("_of_" ^ parm.txt))
@@ -564,9 +576,9 @@ module Str_generate_jsonaf_of = struct
         object
           inherit Ast_traverse.iter as super
 
-          method! core_type_desc =
-            function
-            | Ptyp_var v ->
+          method! core_type_desc t =
+            match Ppxlib_jane.Shim.Core_type_desc.of_parsetree t with
+            | Ptyp_var (v, _) ->
               Location.raise_errorf
                 ~loc
                 "[@jsonaf_drop_default.%s] was used, but the type of the field contains \
@@ -578,7 +590,7 @@ module Str_generate_jsonaf_of = struct
                  | `compare -> "compare"
                  | `equal -> "equal")
                 v
-            | t -> super#core_type_desc t
+            | _ -> super#core_type_desc t
         end
       in
       iter#core_type
@@ -699,6 +711,28 @@ module Str_generate_jsonaf_of = struct
               match [%e evar ~loc ("v_" ^ name)] with
               | Ppx_jsonaf_conv_lib.Option.None -> bnds
               | Ppx_jsonaf_conv_lib.Option.Some v ->
+                let arg = [%e cnv_expr] in
+                let bnd = [%e estring ~loc key], arg in
+                bnd :: bnds
+            in
+            [%e expr]]
+        in
+        patt, expr
+      | `jsonaf_list ->
+        let patt = mk_rec_patt loc patt name in
+        let vname = [%expr v] in
+        let cnv_expr =
+          Fun_or_match.unroll
+            ~loc
+            vname
+            (jsonaf_of_type ~typevar_handling:(`ok renaming) ld.pld_type)
+        in
+        let expr =
+          [%expr
+            let bnds =
+              match [%e evar ~loc ("v_" ^ name)] with
+              | [] -> bnds
+              | v ->
                 let arg = [%e cnv_expr] in
                 let bnd = [%e estring ~loc key], arg in
                 bnd :: bnds
@@ -1024,34 +1058,42 @@ module Str_generate_of_jsonaf = struct
       Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
     | [%type: [%t? _] jsonaf_opaque] | [%type: _] ->
       Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
-    | { ptyp_desc = Ptyp_tuple tp; _ } ->
-      Match (tuple_of_jsonaf ~typevar_handling (loc, tp))
-    | { ptyp_desc = Ptyp_var parm; _ } ->
-      (match typevar_handling with
-       | `ok -> Fun (evar ~loc ("_of_" ^ parm))
-       | `disallowed_in_type_expr ->
+    | _ ->
+      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
+       | Ptyp_tuple labeled_tps ->
+         (match Ppxlib_jane.as_unlabeled_tuple labeled_tps with
+          | Some tps -> Match (tuple_of_jsonaf ~typevar_handling (loc, tps))
+          | None ->
+            Location.raise_errorf
+              ~loc
+              "Labeled tuples unsupported for ppx [of_jsonaf] conversion")
+       | Ptyp_var (parm, _) ->
+         (match typevar_handling with
+          | `ok -> Fun (evar ~loc ("_of_" ^ parm))
+          | `disallowed_in_type_expr ->
+            Location.raise_errorf
+              ~loc
+              "Type variables not allowed in [%%of_jsonaf: ]. Please use locally \
+               abstract types instead.")
+       | Ptyp_constr (id, args) ->
+         let args =
+           List.map args ~f:(fun arg ->
+             Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling arg))
+         in
+         Fun (type_constr_of_jsonaf ~loc ~internal id args)
+       | Ptyp_arrow (_, _, _, _, _) ->
+         Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.fun_of_jsonaf]
+       | Ptyp_variant (row_fields, _, _) ->
+         variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
+       | Ptyp_poly (parms, poly_tp) -> poly_of_jsonaf ~typevar_handling parms poly_tp
+       | Ptyp_any _ ->
+         (* This case is matched in the outer match *)
+         failwith "impossible state"
+       | desc ->
          Location.raise_errorf
            ~loc
-           "Type variables not allowed in [%%of_jsonaf: ]. Please use locally abstract \
-            types instead.")
-    | { ptyp_desc = Ptyp_constr (id, args); _ } ->
-      let args =
-        List.map args ~f:(fun arg ->
-          Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling arg))
-      in
-      Fun (type_constr_of_jsonaf ~loc ~internal id args)
-    | { ptyp_desc = Ptyp_arrow (_, _, _); _ } ->
-      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.fun_of_jsonaf]
-    | { ptyp_desc = Ptyp_variant (row_fields, _, _); _ } ->
-      variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
-    | { ptyp_desc = Ptyp_poly (parms, poly_tp); _ } ->
-      poly_of_jsonaf ~typevar_handling parms poly_tp
-    | { ptyp_desc = Ptyp_object (_, _); _ }
-    | { ptyp_desc = Ptyp_class (_, _); _ }
-    | { ptyp_desc = Ptyp_alias (_, _); _ }
-    | { ptyp_desc = Ptyp_package _; _ }
-    | { ptyp_desc = Ptyp_extension _; _ } ->
-      Location.raise_errorf ~loc "Type unsupported for ppx [of_jsonaf] conversion"
+           "Type unsupported for ppx [of_jsonaf] conversion (%s)"
+           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 
   (* Conversion of tuples *)
   and tuple_of_jsonaf ~typevar_handling (loc, tps) =
@@ -1163,8 +1205,11 @@ module Str_generate_of_jsonaf = struct
       | `S (loc, label, tp, _row) ->
         has_structs_ref := true;
         let args =
-          match tp.ptyp_desc with
-          | Ptyp_tuple tps -> tps
+          match Ppxlib_jane.Shim.Core_type_desc.of_parsetree tp.ptyp_desc with
+          | Ptyp_tuple labeled_tps ->
+            (match Ppxlib_jane.as_unlabeled_tuple labeled_tps with
+             | Some tps -> tps
+             | None -> [ tp ])
           | _ -> [ tp ]
         in
         let expr =
@@ -1275,7 +1320,7 @@ module Str_generate_of_jsonaf = struct
   and poly_of_jsonaf ~typevar_handling parms tp =
     let loc = tp.ptyp_loc in
     let bindings =
-      let mk_binding parm =
+      let mk_binding (parm, _) =
         value_binding
           ~loc
           ~pat:(pvar ~loc ("_of_" ^ parm.txt))
@@ -1306,7 +1351,9 @@ module Str_generate_of_jsonaf = struct
         let nm = ld.pld_name.txt in
         let key = Option.value ~default:nm (Attribute.get Attrs.jsonaf_key ld) in
         (match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld, ld.pld_type with
-         | Some (`jsonaf_option tp), _ | (None | Some (`default _)), tp ->
+         | Some (`jsonaf_option tp), _
+         | (None | Some (`default _)), tp
+         | Some `jsonaf_list, tp ->
            let inits = [%expr Ppx_jsonaf_conv_lib.Option.None] :: inits in
            let unrolled =
              Fun_or_match.unroll
@@ -1356,7 +1403,7 @@ module Str_generate_of_jsonaf = struct
           in
           let new_bi_lst, new_good_patts =
             match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
-            | Some (`default _ | `jsonaf_option _) -> mk_default loc
+            | Some (`default _ | `jsonaf_option _ | `jsonaf_list) -> mk_default loc
             | None ->
               has_nonopt_fields := true;
               ( [%expr
@@ -1390,6 +1437,11 @@ module Str_generate_of_jsonaf = struct
               [%expr
                 match [%e evar ~loc (nm ^ "_value")] with
                 | Ppx_jsonaf_conv_lib.Option.None -> [%e default]
+                | Ppx_jsonaf_conv_lib.Option.Some v -> v]
+            | Some `jsonaf_list ->
+              [%expr
+                match [%e evar ~loc (nm ^ "_value")] with
+                | Ppx_jsonaf_conv_lib.Option.None -> []
                 | Ppx_jsonaf_conv_lib.Option.Some v -> v]
             | Some (`jsonaf_option _) | None -> evar ~loc (nm ^ "_value")
           in

@@ -1307,6 +1307,56 @@ module Optional = struct
   ;;
 end
 
+module Listed = struct
+  type t =
+    { listed : int list [@jsonaf.list]
+    ; unlisted : int list
+    }
+  [@@deriving jsonaf, equal]
+
+  let ( = ) = equal
+
+  let%expect_test _ =
+    let value = { listed = []; unlisted = [] } in
+    let jsonaf = jsonaf_of_t value in
+    print_s (Jsonaf.sexp_of_t jsonaf);
+    [%expect {| (Object ((unlisted (Array ())))) |}];
+    require (t_of_jsonaf jsonaf = value);
+    let json_string = Jsonaf.to_string_hum jsonaf in
+    print_endline json_string;
+    [%expect
+      {|
+      {
+        "unlisted": []
+      }
+      |}];
+    require (Jsonaf.of_string json_string |> t_of_jsonaf = value)
+  ;;
+
+  let%expect_test _ =
+    let value = { listed = [ 5 ]; unlisted = [ 5 ] } in
+    let jsonaf = jsonaf_of_t value in
+    print_s (Jsonaf.sexp_of_t jsonaf);
+    [%expect
+      {| (Object ((listed (Array ((Number 5)))) (unlisted (Array ((Number 5)))))) |}];
+    require (t_of_jsonaf jsonaf = value);
+    let json_string = Jsonaf.to_string_hum jsonaf in
+    print_endline json_string;
+    [%expect
+      {|
+      {
+        "listed": [
+          5
+        ],
+        "unlisted": [
+          5
+        ]
+      }
+      |}];
+    require (Jsonaf.of_string json_string |> t_of_jsonaf = value)
+  ;;
+end
+
 module Variance = struct
   type (+'a, -'b, 'c, +_, -_, _) t [@@deriving jsonaf]
 end
