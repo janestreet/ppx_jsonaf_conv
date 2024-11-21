@@ -77,18 +77,25 @@
 +|    match typ with
 @|============================================================
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
--|    | { ptyp_desc = Ptyp_any; _ } -> Fun [%expr fun _ -> `String "_"]
--|    | { ptyp_desc = Ptyp_tuple tp; _ } ->
--|      Match [ yojson_of_tuple ~typevar_handling (loc, tp) ]
--|    | { ptyp_desc = Ptyp_var parm; _ } ->
+-|    | { ptyp_desc = Ptyp_any _; _ } -> Fun [%expr fun _ -> `String "_"]
+-|    | { ptyp_desc = Ptyp_tuple labeled_tps; _ } ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
 +|    | [%type: _] -> Fun [%expr fun _ -> `String "_"]
 +|    | [%type: [%t? _] jsonaf_opaque] ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
 +|    | _ ->
 +|      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
-+|       | Ptyp_tuple tp -> Match [ jsonaf_of_tuple ~typevar_handling (loc, tp) ]
-+|       | Ptyp_var parm ->
++|       | Ptyp_tuple labeled_tps ->
+@|============================================================
+-|       | Some tps -> Match [ yojson_of_tuple ~typevar_handling (loc, tps) ]
++|          | Some tps -> Match [ jsonaf_of_tuple ~typevar_handling (loc, tps) ]
+@|============================================================
+-|         Location.raise_errorf ~loc "Labeled tuples unsupported in [%%yojson_of: ].")
+-|    | { ptyp_desc = Ptyp_var (parm, _); _ } ->
++|            Location.raise_errorf
++|              ~loc
++|              "Labeled tuples unsupported for ppx [jsonaf_of] conversion")
++|       | Ptyp_var (parm, _) ->
 @|============================================================
 -|           "Type variables not allowed in [%%yojson_of: ]. Please use locally abstract \
 -|            types instead."
@@ -122,7 +129,7 @@
 +|       | Ptyp_variant (row_fields, _, _) ->
 +|         jsonaf_of_variant ~typevar_handling (loc, row_fields)
 +|       | Ptyp_poly (parms, poly_tp) -> jsonaf_of_poly ~typevar_handling parms poly_tp
-+|       | Ptyp_any ->
++|       | Ptyp_any _ ->
 +|         (* This case is matched in the outer match *)
 +|         failwith "impossible state"
 +|       | desc ->
@@ -426,8 +433,13 @@
 +|    | [%type: [%t? _] jsonaf_opaque] | [%type: _] ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
 @|============================================================
--|       | Ptyp_tuple tp -> Match (tuple_of_yojson ~typevar_handling (loc, tp))
-+|       | Ptyp_tuple tp -> Match (tuple_of_jsonaf ~typevar_handling (loc, tp))
+-|          | Some tps -> Match (tuple_of_yojson ~typevar_handling (loc, tps))
++|          | Some tps -> Match (tuple_of_jsonaf ~typevar_handling (loc, tps))
+@|============================================================
+-|            Location.raise_errorf ~loc "Labeled tuples unsupported in [%%of_yojson: ].")
++|            Location.raise_errorf
++|              ~loc
++|              "Labeled tuples unsupported for ppx [of_jsonaf] conversion")
 @|============================================================
 -|              "Type variables not allowed in [%%of_yojson: ]. Please use locally \
 +|              "Type variables not allowed in [%%of_jsonaf: ]. Please use locally \
