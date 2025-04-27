@@ -2,6 +2,7 @@ open Base
 open! Jsonaf_kernel
 open! Jsonaf
 open Expect_test_helpers_core
+open Async_log_kernel.Ppx_log_syntax
 
 (* Module names below are used in error messages being tested. *)
 open Jsonaf.Export
@@ -1463,6 +1464,28 @@ module Allow_extra_fields = struct
          "ppx_jsonaf_test.ml.Allow_extra_fields.M2.t1_of_jsonaf: extra fields: b"
          (Array ((String A) (Object ((a (Array ((Number 0)))) (b (String 1)))))))
         |}]
+    ;;
+  end
+end
+
+module Allow_extra_fields_log = struct
+  module M1 = struct
+    type t1 = { a : int } [@@deriving jsonaf, equal]
+
+    type t2 = t1 = { a : int }
+    [@@deriving jsonaf, equal] [@@jsonaf.allow_extra_fields.log]
+
+    let ( = ) = equal_t2
+
+    let%expect_test _ =
+      let jsonaf = Jsonaf.of_string {|{"a":1}|} in
+      let jsonaf_extra = Jsonaf.of_string {|{"a":1,"b":2}|} in
+      require (t2_of_jsonaf jsonaf = t2_of_jsonaf jsonaf_extra);
+      [%expect
+        {| 1969-12-31 19:00:00.000000-05:00 Error "ppx_jsonaf_test.ml.Allow_extra_fields_log.M1.t2_of_jsonaf: extra fields: b" |}];
+      require (t1_of_jsonaf jsonaf = t2_of_jsonaf jsonaf_extra);
+      [%expect
+        {| 1969-12-31 19:00:00.000000-05:00 Error "ppx_jsonaf_test.ml.Allow_extra_fields_log.M1.t2_of_jsonaf: extra fields: b" |}]
     ;;
   end
 end

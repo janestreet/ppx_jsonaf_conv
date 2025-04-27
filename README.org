@@ -221,6 +221,11 @@ raising.  This applies only to the record to which the annotation is
 attached, and not to deeper jsonaf converters that may be called during
 conversion of a jsonaf to the record.
 
+If you'd like to log extra fields instead of ignoring or raising, you can use the
+=@jsonaf.allow_extra_fields.log= annotation. The generated code will use =ppx_log=, so you
+must have =Async_log_kernel.Ppx_log_syntax= in scope if you'd like to use this annotation.
+This can be achieved by opening it directly or by opening =Async=
+
 #+begin_src ocaml
   type t = { a: int } [@@deriving jsonaf]
   {"a":1,"b":2} => exception
@@ -230,6 +235,10 @@ conversion of a jsonaf to the record.
 
   type t = A of { a : int } [@jsonaf.allow_extra_fields] [@@deriving jsonaf]
   ["A", {"a":1,"b":2}] => A {a = 1}
+
+  type t = A of { a : int } [@jsonaf.allow_extra_fields.log] [@@deriving jsonaf]
+  ["A", {"a":1,"b":2}] => A {a = 1}
+  1969-12-31 19:00:00.000000-05:00 Error "t_of_jsonaf: extra fields: b"
 #+end_src
 
 *** Variants

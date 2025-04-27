@@ -315,7 +315,7 @@ module Sig_generate_jsonaf_of = struct
         ~loc
         (value_description
            ~loc
-           ~name:(Located.map (( ^ ) "jsonaf_of_") td.ptype_name)
+           ~name:(Located.map (fun x -> "jsonaf_of_" ^ x) td.ptype_name)
            ~type_:(mk_type td)
            ~prim:[]))
   ;;
@@ -653,20 +653,15 @@ module Str_generate_jsonaf_of = struct
           match how with
           | `no_arg ->
             [%expr
-              Ppx_jsonaf_conv_lib.poly_equal [@ocaml.ppwarning
-                                               "[@jsonaf_drop_default] is deprecated: \
-                                                please use one of:\n\
-                                                - [@jsonaf_drop_default f] and give an \
-                                                explicit equality function ([f = \
-                                                Poly.(=)] corresponds to the old \
-                                                behavior)\n\
-                                                - [@jsonaf_drop_default.compare] if the \
-                                                type supports [%compare]\n\
-                                                - [@jsonaf_drop_default.equal] if the \
-                                                type supports [%equal]\n\
-                                                - [@jsonaf_drop_default.jsonaf] if you \
-                                                want to compare the jsonaf \
-                                                representations\n"]]
+              Ppx_jsonaf_conv_lib.poly_equal
+              [@ocaml.ppwarning
+                "[@jsonaf_drop_default] is deprecated: please use one of:\n\
+                 - [@jsonaf_drop_default f] and give an explicit equality function ([f = \
+                 Poly.(=)] corresponds to the old behavior)\n\
+                 - [@jsonaf_drop_default.compare] if the type supports [%compare]\n\
+                 - [@jsonaf_drop_default.equal] if the type supports [%equal]\n\
+                 - [@jsonaf_drop_default.jsonaf] if you want to compare the jsonaf \
+                 representations\n"]]
           | `func f -> f
           | `compare ->
             disallow_type_variables_and_recursive_occurrences
@@ -872,7 +867,7 @@ module Str_generate_jsonaf_of = struct
     let { ptype_name = { txt = type_name; loc = _ }; ptype_loc = loc; _ } = td in
     let body =
       let body =
-        match td.ptype_kind with
+        match Ppxlib_jane.Shim.Type_kind.of_parsetree td.ptype_kind with
         | Ptype_variant cds ->
           jsonaf_of_sum ~types_being_defined (List.map tps ~f:(fun x -> x.txt)) cds
         | Ptype_record lds ->
@@ -886,6 +881,8 @@ module Str_generate_jsonaf_of = struct
               ~wrap_expr:(fun expr -> [%expr `Object [%e expr]])
           in
           Match [ patt --> expr ]
+        | Ptype_record_unboxed_product _ ->
+          Location.raise_errorf ~loc "ppx_jsonaf_conv: unboxed record types not supported"
         | Ptype_open ->
           Location.raise_errorf ~loc "ppx_jsonaf_conv: open types not supported"
         | Ptype_abstract ->
@@ -966,8 +963,12 @@ module Str_generate_jsonaf_fields = struct
     let tps = List.map td.ptype_params ~f:get_type_param_name in
     let { ptype_name = { txt = type_name; loc = _ }; ptype_loc = loc; _ } = td in
     let body =
-      match td.ptype_kind with
+      match Ppxlib_jane.Shim.Type_kind.of_parsetree td.ptype_kind with
       | Ptype_record lds -> jsonaf_fields_of_label_declaration_list loc lds
+      | Ptype_record_unboxed_product _ ->
+        Location.raise_errorf
+          ~loc
+          "ppx_jsonaf_conv: jsonaf_fields is not supported for unboxed records"
       | Ptype_variant _ | Ptype_open | Ptype_abstract ->
         Location.raise_errorf ~loc "ppx_jsonaf_conv: jsonaf_fields only works on records"
     in
@@ -1378,9 +1379,9 @@ module Str_generate_of_jsonaf = struct
     let handle_extra =
       [ ([%pat? _]
          -->
-         if allow_extra_fields
-         then [%expr ()]
-         else
+         match allow_extra_fields with
+         | `Allow -> [%expr ()]
+         | `Log | `Raise ->
            [%expr
              if Ppx_jsonaf_conv_lib.( ! )
                   Ppx_jsonaf_conv_lib.Jsonaf_conv.record_check_extra_fields
@@ -1513,13 +1514,35 @@ module Str_generate_of_jsonaf = struct
             (Ppx_jsonaf_conv_lib.( ! ) duplicates)
             jsonaf
         | [] ->
-          (match Ppx_jsonaf_conv_lib.( ! ) extra with
-           | _ :: _ ->
-             Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_extra_fields
-               _tp_loc
-               (Ppx_jsonaf_conv_lib.( ! ) extra)
-               jsonaf
-           | [] -> [%e mk_handle_record_match_result has_poly (loc, flds) ~wrap_expr])]
+          [%e
+            let sub_expr =
+              mk_handle_record_match_result has_poly (loc, flds) ~wrap_expr
+            in
+            let non_empty_case =
+              match allow_extra_fields with
+              (* Should be unreachable, still drop in the sub_expr anyway just in case *)
+              | `Allow -> sub_expr
+              | `Log ->
+                [%expr
+                  let msg =
+                    Ppx_jsonaf_conv_lib.Jsonaf_conv_error.format_superfluous_fields
+                      ~what:"extra fields"
+                      ~loc:_tp_loc
+                      (Ppx_jsonaf_conv_lib.( ! ) extra)
+                  in
+                  [%log.global.error msg];
+                  [%e sub_expr]]
+              | `Raise ->
+                [%expr
+                  Ppx_jsonaf_conv_lib.Jsonaf_conv_error.record_extra_fields
+                    _tp_loc
+                    (Ppx_jsonaf_conv_lib.( ! ) extra)
+                    jsonaf]
+            in
+            [%expr
+              match Ppx_jsonaf_conv_lib.( ! ) extra with
+              | [] -> [%e sub_expr]
+              | _ :: _ -> [%e non_empty_case]]]]
   ;;
 
   let is_poly (_, flds) =
@@ -1595,7 +1618,18 @@ module Str_generate_of_jsonaf = struct
           label_declaration_list_of_jsonaf
             ~typevar_handling
             ~allow_extra_fields:
-              (Option.is_some (Attribute.get Attrs.allow_extra_fields_cd cd))
+              (match
+                 ( Option.is_some (Attribute.get Attrs.allow_extra_fields_cd cd)
+                 , Option.is_some (Attribute.get Attrs.allow_extra_fields_log_cd cd) )
+               with
+               | true, true ->
+                 Location.raise_errorf
+                   ~loc
+                   "ppx_jsonaf_conv: You can only specify one of \
+                    [@@@@allow_extra_fields] and [@@@@allow_extra_fields.log]"
+               | false, true -> `Log
+               | true, false -> `Allow
+               | false, false -> `Raise)
             loc
             fields
             ~wrap_expr:(fun e ->
@@ -1695,7 +1729,7 @@ module Str_generate_of_jsonaf = struct
     in
     let body =
       let body =
-        match td.ptype_kind with
+        match Ppxlib_jane.Shim.Type_kind.of_parsetree td.ptype_kind with
         | Ptype_variant alts ->
           Attrs.fail_if_allow_extra_field_td ~loc td;
           sum_of_jsonaf ~typevar_handling (td.ptype_loc, alts)
@@ -1703,8 +1737,21 @@ module Str_generate_of_jsonaf = struct
           record_of_jsonaf
             ~typevar_handling
             ~allow_extra_fields:
-              (Option.is_some (Attribute.get Attrs.allow_extra_fields_td td))
+              (match
+                 ( Option.is_some (Attribute.get Attrs.allow_extra_fields_td td)
+                 , Option.is_some (Attribute.get Attrs.allow_extra_fields_log_td td) )
+               with
+               | true, true ->
+                 Location.raise_errorf
+                   ~loc
+                   "ppx_jsonaf_conv: You can only specify one of \
+                    [@@@@allow_extra_fields] and [@@@@allow_extra_fields.log]"
+               | false, true -> `Log
+               | true, false -> `Allow
+               | false, false -> `Raise)
             (loc, lbls)
+        | Ptype_record_unboxed_product _ ->
+          Location.raise_errorf ~loc "ppx_jsonaf_conv: unboxed record types not supported"
         | Ptype_open ->
           Location.raise_errorf ~loc "ppx_jsonaf_conv: open types not supported"
         | Ptype_abstract ->

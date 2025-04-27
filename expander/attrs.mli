@@ -10,6 +10,8 @@ val drop_if : (label_declaration, expression) Attribute.t
 val opaque : (core_type, unit) Attribute.t
 val allow_extra_fields_td : (type_declaration, unit) Attribute.t
 val allow_extra_fields_cd : (constructor_declaration, unit) Attribute.t
+val allow_extra_fields_log_td : (type_declaration, unit) Attribute.t
+val allow_extra_fields_log_cd : (constructor_declaration, unit) Attribute.t
 val invalid_attribute : loc:Location.t -> (_, _) Attribute.t -> string -> 'a
 val fail_if_allow_extra_field_cd : loc:Location.t -> constructor_declaration -> unit
 val fail_if_allow_extra_field_td : loc:Location.t -> type_declaration -> unit
