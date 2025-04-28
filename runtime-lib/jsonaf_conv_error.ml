@@ -43,9 +43,13 @@ let unexpected_stag loc jsonaf =
 
 (* Errors concerning records *)
 
-let record_superfluous_fields ~what ~loc rev_fld_names jsonaf =
+let format_superfluous_fields ~what ~loc rev_fld_names =
   let fld_names_str = String.concat (List.rev rev_fld_names) ~sep:" " in
-  let msg = sprintf "%s_of_jsonaf: %s: %s" loc what fld_names_str in
+  sprintf "%s_of_jsonaf: %s: %s" loc what fld_names_str
+;;
+
+let record_superfluous_fields ~what ~loc rev_fld_names jsonaf =
+  let msg = format_superfluous_fields ~what ~loc rev_fld_names in
   of_jsonaf_error msg jsonaf
 ;;
 
