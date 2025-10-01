@@ -12,11 +12,12 @@ build: [
 depends: [
   "ocaml" {>= "5.1.0"}
   "base"
+  "capitalization"
   "jsonaf"
   "ppx_jane"
   "ppxlib_jane"
-  "dune"        {>= "3.17.0"}
-  "ppxlib"      {= "0.33.0+ox"}
+  "dune"           {>= "3.17.0"}
+  "ppxlib"         {= "0.33.0+ox"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "[@@deriving] plugin to generate Jsonaf conversion functions"

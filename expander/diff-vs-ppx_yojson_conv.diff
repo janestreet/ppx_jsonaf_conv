@@ -1,6 +1,9 @@
 ------ ../../ppx_yojson_conv/expander/ppx_yojson_conv_expander.ml
 ++++++ ppx_jsonaf_conv_expander.ml
 @|============================================================
+-|  match Attribute.get Attrs.yojson_key ld with
++|  match Attribute.get Attrs.jsonaf_key ld with
+@|============================================================
 -|   we generate a function that takes an yojson_of parameter named after 'a, but 'a is not in
 +|   we generate a function that takes an jsonaf_of parameter named after 'a, but 'a is not in
 @|============================================================
@@ -87,8 +90,8 @@
 +|      (match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
 +|       | Ptyp_tuple labeled_tps ->
 @|============================================================
--|       | Some tps -> Match [ yojson_of_tuple ~typevar_handling (loc, tps) ]
-+|          | Some tps -> Match [ jsonaf_of_tuple ~typevar_handling (loc, tps) ]
+-|         Match [ yojson_of_tuple ~typevar_handling ~capitalization (loc, tps) ]
++|            Match [ jsonaf_of_tuple ~typevar_handling ~capitalization (loc, tps) ]
 @|============================================================
 -|         Location.raise_errorf ~loc "Labeled tuples unsupported in [%%yojson_of: ].")
 -|    | { ptyp_desc = Ptyp_var (parm, _); _ } ->
@@ -102,33 +105,34 @@
 +|              "Type variables not allowed in [%%jsonaf_of: ]. Please use locally \
 +|               abstract types instead."
 @|============================================================
--|          | Existentially_bound -> yojson_of_type ~typevar_handling [%type: _]))
+-|            yojson_of_type ~typevar_handling ~capitalization [%type: _]))
 -|    | { ptyp_desc = Ptyp_constr (id, args); _ } ->
 -|      (match typ with
 -|       | [%type: [%t? _] yojson_opaque] ->
 -|         Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
 -|       | _ ->
-+|             | Existentially_bound -> jsonaf_of_type ~typevar_handling [%type: _]))
++|               jsonaf_of_type ~typevar_handling ~capitalization [%type: _]))
 +|       | Ptyp_constr (id, args) ->
 @|============================================================
 -|           (yojson_of_type_constr
 +|           (jsonaf_of_type_constr
 @|============================================================
--|                 Fun_or_match.expr ~loc (yojson_of_type ~typevar_handling tp)))))
+-|                   (yojson_of_type ~typevar_handling ~capitalization tp)))))
 -|    | { ptyp_desc = Ptyp_arrow (_, _, _, _, _); _ } ->
-+|                 Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling tp))))
++|                   (jsonaf_of_type ~typevar_handling ~capitalization tp))))
 +|       | Ptyp_arrow (_, _, _, _, _) ->
 @|============================================================
 -|            Ppx_yojson_conv_lib.Yojson_conv.yojson_of_fun Ppx_yojson_conv_lib.ignore]
 -|    | { ptyp_desc = Ptyp_variant (row_fields, _, _); _ } ->
--|      yojson_of_variant ~typevar_handling (loc, row_fields)
+-|      yojson_of_variant ~typevar_handling ~capitalization (loc, row_fields)
 -|    | { ptyp_desc = Ptyp_poly (parms, poly_tp); _ } ->
--|      yojson_of_poly ~typevar_handling parms poly_tp
+-|      yojson_of_poly ~typevar_handling ~capitalization parms poly_tp
 -|    | { ptyp_desc; _ } ->
 +|               Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_fun Ppx_jsonaf_conv_lib.ignore]
 +|       | Ptyp_variant (row_fields, _, _) ->
-+|         jsonaf_of_variant ~typevar_handling (loc, row_fields)
-+|       | Ptyp_poly (parms, poly_tp) -> jsonaf_of_poly ~typevar_handling parms poly_tp
++|         jsonaf_of_variant ~typevar_handling ~capitalization (loc, row_fields)
++|       | Ptyp_poly (parms, poly_tp) ->
++|         jsonaf_of_poly ~typevar_handling ~capitalization parms poly_tp
 +|       | Ptyp_any _ ->
 +|         (* This case is matched in the outer match *)
 +|         failwith "impossible state"
@@ -139,10 +143,11 @@
 +|           "Type unsupported for ppx [jsonaf_of] conversion (%s)"
 +|           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 @|============================================================
--|  and yojson_of_tuple ~typevar_handling (loc, tps) =
--|    let fps = List.map ~f:(fun tp -> yojson_of_type ~typevar_handling tp) tps in
-+|  and jsonaf_of_tuple ~typevar_handling (loc, tps) =
-+|    let fps = List.map ~f:(fun tp -> jsonaf_of_type ~typevar_handling tp) tps in
+-|  and yojson_of_tuple ~typevar_handling ~capitalization (loc, tps) =
++|  and jsonaf_of_tuple ~typevar_handling ~capitalization (loc, tps) =
+@|============================================================
+-|      List.map ~f:(fun tp -> yojson_of_type ~typevar_handling ~capitalization tp) tps
++|      List.map ~f:(fun tp -> jsonaf_of_type ~typevar_handling ~capitalization tp) tps
 @|============================================================
 -|    let in_expr = [%expr `List [%e elist ~loc evars]] in
 +|    let in_expr = [%expr `Array [%e elist ~loc evars]] in
@@ -156,9 +161,12 @@
 -|        --> [%expr `List [ `String [%e estring ~loc (Label_with_name.name label)] ]]
 +|        --> [%expr `Array [ `String [%e estring ~loc (Label_with_name.name label)] ]]
 @|============================================================
--|        let yojson_of_args = List.map ~f:(yojson_of_type ~typevar_handling) args in
+-|        let yojson_of_args =
+-|          List.map ~f:(yojson_of_type ~typevar_handling ~capitalization) args
++|        let jsonaf_of_args =
++|          List.map ~f:(jsonaf_of_type ~typevar_handling ~capitalization) args
+@|============================================================
 -|        let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc yojson_of_args in
-+|        let jsonaf_of_args = List.map ~f:(jsonaf_of_type ~typevar_handling) args in
 +|        let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc jsonaf_of_args in
 @|============================================================
 -|              [%expr `List [%e elist ~loc (cnstr_expr :: vars)]]
@@ -170,14 +178,14 @@
 -|        Location.raise_errorf ~loc "unsupported: yojson_of_variant/Rtag/&"
 +|        Location.raise_errorf ~loc "unsupported: jsonaf_of_variant/Rtag/&"
 @|============================================================
--|        let call = Fun_or_match.expr ~loc (yojson_of_type ~typevar_handling typ) in
-+|        let call = Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling typ) in
+-|          Fun_or_match.expr ~loc (yojson_of_type ~typevar_handling ~capitalization typ)
++|          Fun_or_match.expr ~loc (jsonaf_of_type ~typevar_handling ~capitalization typ)
 @|============================================================
 -|        Location.raise_errorf ~loc "unsupported: yojson_of_variant/Rinherit/non-id"
 +|        Location.raise_errorf ~loc "unsupported: jsonaf_of_variant/Rinherit/non-id"
 @|============================================================
--|  and yojson_of_poly ~typevar_handling parms tp =
-+|  and jsonaf_of_poly ~typevar_handling parms tp =
+-|  and yojson_of_poly ~typevar_handling ~capitalization parms tp =
++|  and jsonaf_of_poly ~typevar_handling ~capitalization parms tp =
 @|============================================================
 -|      (* Should be impossible because [yojson_of_poly] is only called on polymorphic record
 +|      (* Should be impossible because [jsonaf_of_poly] is only called on polymorphic record
@@ -185,17 +193,20 @@
 -|            ~expr:[%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
 +|            ~expr:[%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
 @|============================================================
--|      (match yojson_of_type ~typevar_handling:(`ok renaming) tp with
-+|      (match jsonaf_of_type ~typevar_handling:(`ok renaming) tp with
+-|      (match yojson_of_type ~typevar_handling:(`ok renaming) ~capitalization tp with
++|      (match jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization tp with
 @|============================================================
 -|    | Inspect_yojson of (cnv_expr:expression -> location -> expression -> expression)
 +|    | Inspect_jsonaf of (cnv_expr:expression -> location -> expression -> expression)
 @|============================================================
--|  let yojson_of_record_field ~renaming patt expr name tp ?yojson_of is_empty_expr key =
-+|  let jsonaf_of_record_field ~renaming patt expr name tp ?jsonaf_of is_empty_expr key =
+-|  let yojson_of_record_field
++|  let jsonaf_of_record_field
 @|============================================================
--|      match yojson_of_type ~typevar_handling:(`ok renaming) tp with
-+|      match jsonaf_of_type ~typevar_handling:(`ok renaming) tp with
+-|    ?yojson_of
++|    ?jsonaf_of
+@|============================================================
+-|      match yojson_of_type ~typevar_handling:(`ok renaming) ~capitalization tp with
++|      match jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization tp with
 @|============================================================
 -|      match yojson_of with
 +|      match jsonaf_of with
@@ -250,22 +261,22 @@
 +|                 - [@jsonaf_drop_default.equal] if the type supports [%equal]\n\
 +|                 - [@jsonaf_drop_default.jsonaf] if you want to compare the jsonaf \
 @|============================================================
--|    yojson_of_record_field ~renaming patt expr name tp ?yojson_of is_empty key
-+|    jsonaf_of_record_field ~renaming patt expr name tp ?jsonaf_of is_empty key
+-|    yojson_of_record_field
++|    jsonaf_of_record_field
 @|============================================================
--|  let yojson_of_label_declaration_list ~types_being_defined ~renaming loc flds ~wrap_expr =
-+|  let jsonaf_of_label_declaration_list ~types_being_defined ~renaming loc flds ~wrap_expr =
+-|      ?yojson_of
++|      ?jsonaf_of
 @|============================================================
--|        Option.value ~default:ld.pld_name.txt (Attribute.get Attrs.yojson_key ld)
-+|        Option.value ~default:ld.pld_name.txt (Attribute.get Attrs.jsonaf_key ld)
+-|  let yojson_of_label_declaration_list
++|  let jsonaf_of_label_declaration_list
 @|============================================================
 -|      match Attrs.Record_field_handler.Yojson_of.create ~loc ld with
 -|      | `yojson_option tp ->
 +|      match Attrs.Record_field_handler.Jsonaf_of.create ~loc ld with
 +|      | `jsonaf_option tp ->
 @|============================================================
--|            (yojson_of_type ~typevar_handling:(`ok renaming) tp)
-+|            (jsonaf_of_type ~typevar_handling:(`ok renaming) tp)
+-|            (yojson_of_type ~typevar_handling:(`ok renaming) ~capitalization tp)
++|            (jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization tp)
 @|============================================================
 -|              | Ppx_yojson_conv_lib.Option.None -> bnds
 -|              | Ppx_yojson_conv_lib.Option.Some v ->
@@ -285,7 +296,7 @@
 +|          Fun_or_match.unroll
 +|            ~loc
 +|            vname
-+|            (jsonaf_of_type ~typevar_handling:(`ok renaming) ld.pld_type)
++|            (jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization ld.pld_type)
 +|        in
 +|        let expr =
 +|          [%expr
@@ -300,8 +311,8 @@
 -|        yojson_of_record_field
 +|        jsonaf_of_record_field
 @|============================================================
--|            (yojson_of_type ~typevar_handling:(`ok renaming) tp)
-+|            (jsonaf_of_type ~typevar_handling:(`ok renaming) tp)
+-|            (yojson_of_type ~typevar_handling:(`ok renaming) ~capitalization tp)
++|            (jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization tp)
 @|============================================================
 -|        let bnds : (string * Ppx_yojson_conv_lib.Yojson.Safe.t) list = [] in
 +|        let bnds : (string * Ppx_jsonaf_conv_lib.Jsonaf_kernel.t) list = [] in
@@ -319,8 +330,8 @@
 -|         let yojson_of_args =
 +|         let jsonaf_of_args =
 @|============================================================
--|               |> yojson_of_type ~typevar_handling:(`ok renaming))
-+|               |> jsonaf_of_type ~typevar_handling:(`ok renaming))
+-|               |> yojson_of_type ~typevar_handling:(`ok renaming) ~capitalization)
++|               |> jsonaf_of_type ~typevar_handling:(`ok renaming) ~capitalization)
 @|============================================================
 -|         let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc yojson_of_args in
 +|         let bindings, patts, vars = Fun_or_match.map_tmp_vars ~loc jsonaf_of_args in
@@ -328,17 +339,17 @@
 -|               [%expr `List [%e elist ~loc (cnstr_expr :: vars)]])
 +|               [%expr `Array [%e elist ~loc (cnstr_expr :: vars)]])
 @|============================================================
--|  let yojson_of_sum ~types_being_defined tps cds =
-+|  let jsonaf_of_sum ~types_being_defined tps cds =
+-|  let yojson_of_sum ~types_being_defined ~capitalization tps cds =
++|  let jsonaf_of_sum ~types_being_defined ~capitalization tps cds =
 @|============================================================
 -|  let yojson_of_nil loc = Fun_or_match.Fun [%expr fun _v -> assert false]
 +|  let jsonaf_of_nil loc = Fun_or_match.Fun [%expr fun _v -> assert false]
 @|============================================================
--|  let yojson_of_td ~types_being_defined td =
-+|  let jsonaf_of_td ~types_being_defined td =
+-|  let yojson_of_td ~types_being_defined ~capitalization td =
++|  let jsonaf_of_td ~types_being_defined ~capitalization td =
 @|============================================================
--|          yojson_of_sum ~types_being_defined (List.map tps ~f:(fun x -> x.txt)) cds
-+|          jsonaf_of_sum ~types_being_defined (List.map tps ~f:(fun x -> x.txt)) cds
+-|          yojson_of_sum
++|          jsonaf_of_sum
 @|============================================================
 -|            yojson_of_label_declaration_list
 +|            jsonaf_of_label_declaration_list
@@ -353,9 +364,10 @@
 +|          Location.raise_errorf ~loc "ppx_jsonaf_conv: open types not supported"
 @|============================================================
 -|           | None -> yojson_of_nil loc
--|           | Some ty -> yojson_of_type ~typevar_handling:(`ok Renaming.identity) ty)
 +|           | None -> jsonaf_of_nil loc
-+|           | Some ty -> jsonaf_of_type ~typevar_handling:(`ok Renaming.identity) ty)
+@|============================================================
+-|             yojson_of_type ~typevar_handling:(`ok Renaming.identity) ~capitalization ty)
++|             jsonaf_of_type ~typevar_handling:(`ok Renaming.identity) ~capitalization ty)
 @|============================================================
 -|          | None -> Location.raise_errorf ~loc "yojson_of_td/no-manifest"
 +|          | None -> Location.raise_errorf ~loc "jsonaf_of_td/no-manifest"
@@ -365,25 +377,22 @@
 +|    let typ = Sig_generate_jsonaf_of.mk_type td in
 +|    let func_name = "jsonaf_of_" ^ type_name in
 @|============================================================
--|  let yojson_of_tds ~loc ~path:_ (rec_flag, tds) =
-+|  let jsonaf_of_tds ~loc ~path:_ (rec_flag, tds) =
+-|  let yojson_of_tds ~loc ~path:_ (rec_flag, tds) capitalization =
++|  let jsonaf_of_tds ~loc ~path:_ (rec_flag, tds) capitalization =
 @|============================================================
--|    let bindings = List.concat_map tds ~f:(yojson_of_td ~types_being_defined) in
-+|    let bindings = List.concat_map tds ~f:(jsonaf_of_td ~types_being_defined) in
+-|      List.concat_map tds ~f:(yojson_of_td ~types_being_defined ~capitalization)
++|      List.concat_map tds ~f:(jsonaf_of_td ~types_being_defined ~capitalization)
 @|============================================================
 -|module Str_generate_yojson_fields = struct
--|  let yojson_fields_of_label_declaration_list loc flds =
+-|  let yojson_fields_of_label_declaration_list ~capitalization loc flds =
 +|module Str_generate_jsonaf_fields = struct
-+|  let jsonaf_fields_of_label_declaration_list loc flds =
++|  let jsonaf_fields_of_label_declaration_list ~capitalization loc flds =
 @|============================================================
--|        Option.value ~default:ld.pld_name.txt (Attribute.get Attrs.yojson_key ld)
-+|        Option.value ~default:ld.pld_name.txt (Attribute.get Attrs.jsonaf_key ld)
+-|  let yojson_fields_of_td ~capitalization td =
++|  let jsonaf_fields_of_td ~capitalization td =
 @|============================================================
--|  let yojson_fields_of_td td =
-+|  let jsonaf_fields_of_td td =
-@|============================================================
--|      | Ptype_record lds -> yojson_fields_of_label_declaration_list loc lds
-+|      | Ptype_record lds -> jsonaf_fields_of_label_declaration_list loc lds
+-|        yojson_fields_of_label_declaration_list ~capitalization loc lds
++|        jsonaf_fields_of_label_declaration_list ~capitalization loc lds
 @|============================================================
 -|          "ppx_yojson_conv: yojson_fields does not yet support unboxed records"
 +|          "ppx_jsonaf_conv: jsonaf_fields is not supported for unboxed records"
@@ -394,10 +403,11 @@
 -|    let func_name = "yojson_fields_of_" ^ type_name in
 +|    let func_name = "jsonaf_fields_of_" ^ type_name in
 @|============================================================
--|  let yojson_fields_of_tds ~loc ~path:_ (_, tds) =
--|    pstr_value_list ~loc Nonrecursive (List.map tds ~f:yojson_fields_of_td)
-+|  let jsonaf_fields_of_tds ~loc ~path:_ (_, tds) =
-+|    pstr_value_list ~loc Nonrecursive (List.map tds ~f:jsonaf_fields_of_td)
+-|  let yojson_fields_of_tds ~loc ~path:_ (_, tds) capitalization =
++|  let jsonaf_fields_of_tds ~loc ~path:_ (_, tds) capitalization =
+@|============================================================
+-|      (List.map tds ~f:(yojson_fields_of_td ~capitalization))
++|      (List.map tds ~f:(jsonaf_fields_of_td ~capitalization))
 @|============================================================
 -|module Str_generate_of_yojson = struct
 +|module Str_generate_of_jsonaf = struct
@@ -426,8 +436,8 @@
 -|      let s = s ^ "_of_yojson" in
 +|      let s = s ^ "_of_jsonaf" in
 @|============================================================
--|  let rec type_of_yojson ~typevar_handling ?full_type ?(internal = false) typ
-+|  let rec type_of_jsonaf ~typevar_handling ?full_type ?(internal = false) typ
+-|  let rec type_of_yojson
++|  let rec type_of_jsonaf
 @|============================================================
 -|      Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.opaque_of_yojson]
 -|    | [%type: [%t? _] yojson_opaque] | [%type: _] ->
@@ -436,8 +446,8 @@
 +|    | [%type: [%t? _] jsonaf_opaque] | [%type: _] ->
 +|      Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.opaque_of_jsonaf]
 @|============================================================
--|          | Some tps -> Match (tuple_of_yojson ~typevar_handling (loc, tps))
-+|          | Some tps -> Match (tuple_of_jsonaf ~typevar_handling (loc, tps))
+-|            Match (tuple_of_yojson ~typevar_handling ~capitalization (loc, tps))
++|            Match (tuple_of_jsonaf ~typevar_handling ~capitalization (loc, tps))
 @|============================================================
 -|            Location.raise_errorf ~loc "Labeled tuples unsupported in [%%of_yojson: ].")
 +|            Location.raise_errorf
@@ -447,8 +457,8 @@
 -|              "Type variables not allowed in [%%of_yojson: ]. Please use locally \
 +|              "Type variables not allowed in [%%of_jsonaf: ]. Please use locally \
 @|============================================================
--|             Fun_or_match.expr ~loc (type_of_yojson ~typevar_handling arg))
-+|             Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling arg))
+-|             Fun_or_match.expr ~loc (type_of_yojson ~typevar_handling ~capitalization arg))
++|             Fun_or_match.expr ~loc (type_of_jsonaf ~typevar_handling ~capitalization arg))
 @|============================================================
 -|         Fun (type_constr_of_yojson ~loc ~internal id args)
 +|         Fun (type_constr_of_jsonaf ~loc ~internal id args)
@@ -456,10 +466,11 @@
 -|         Fun [%expr Ppx_yojson_conv_lib.Yojson_conv.fun_of_yojson]
 +|         Fun [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.fun_of_jsonaf]
 @|============================================================
--|         variant_of_yojson ~typevar_handling ?full_type (loc, row_fields)
--|       | Ptyp_poly (parms, poly_tp) -> poly_of_yojson ~typevar_handling parms poly_tp
-+|         variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields)
-+|       | Ptyp_poly (parms, poly_tp) -> poly_of_jsonaf ~typevar_handling parms poly_tp
+-|         variant_of_yojson ~typevar_handling ~capitalization ?full_type (loc, row_fields)
++|         variant_of_jsonaf ~typevar_handling ~capitalization ?full_type (loc, row_fields)
+@|============================================================
+-|         poly_of_yojson ~typevar_handling ~capitalization parms poly_tp
++|         poly_of_jsonaf ~typevar_handling ~capitalization parms poly_tp
 @|============================================================
 -|       | typ ->
 +|       | desc ->
@@ -469,10 +480,10 @@
 +|           "Type unsupported for ppx [of_jsonaf] conversion (%s)"
 +|           (Ppxlib_jane.Language_feature_name.of_core_type_desc desc))
 @|============================================================
--|  and tuple_of_yojson ~typevar_handling (loc, tps) =
--|    let fps = List.map ~f:(type_of_yojson ~typevar_handling) tps in
-+|  and tuple_of_jsonaf ~typevar_handling (loc, tps) =
-+|    let fps = List.map ~f:(type_of_jsonaf ~typevar_handling) tps in
+-|  and tuple_of_yojson ~typevar_handling ~capitalization (loc, tps) =
+-|    let fps = List.map ~f:(type_of_yojson ~typevar_handling ~capitalization) tps in
++|  and tuple_of_jsonaf ~typevar_handling ~capitalization (loc, tps) =
++|    let fps = List.map ~f:(type_of_jsonaf ~typevar_handling ~capitalization) tps in
 @|============================================================
 -|    [ [%pat? `List [%p plist ~loc patts]]
 +|    [ [%pat? `Array [%p plist ~loc patts]]
@@ -486,14 +497,14 @@
 -|              yojson]
 +|              jsonaf]
 @|============================================================
--|    let func_expr = type_of_yojson ~typevar_handling ~internal:true inh in
-+|    let func_expr = type_of_jsonaf ~typevar_handling ~internal:true inh in
+-|    let func_expr = type_of_yojson ~typevar_handling ~capitalization ~internal:true inh in
++|    let func_expr = type_of_jsonaf ~typevar_handling ~capitalization ~internal:true inh in
 @|============================================================
 -|      Fun [%expr [%e fun_expr] _yojson]
 +|      Fun [%expr [%e fun_expr] _jsonaf]
 @|============================================================
--|      let fps = List.map ~f:(type_of_yojson ~typevar_handling) tps in
-+|      let fps = List.map ~f:(type_of_jsonaf ~typevar_handling) tps in
+-|      let fps = List.map ~f:(type_of_yojson ~typevar_handling ~capitalization) tps in
++|      let fps = List.map ~f:(type_of_jsonaf ~typevar_handling ~capitalization) tps in
 @|============================================================
 -|      match yojson_args with
 +|      match jsonaf_args with
@@ -539,12 +550,12 @@
 +|    ; [%pat? _ as jsonaf]
 +|      --> [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv_error.unexpected_stag _tp_loc jsonaf]
 @|============================================================
--|  and variant_of_yojson ~typevar_handling ?full_type (loc, row_fields) =
-+|  and variant_of_jsonaf ~typevar_handling ?full_type (loc, row_fields) =
+-|  and variant_of_yojson ~typevar_handling ~capitalization ?full_type (loc, row_fields) =
++|  and variant_of_jsonaf ~typevar_handling ~capitalization ?full_type (loc, row_fields) =
 @|============================================================
--|                   (type_of_yojson ~typevar_handling ~internal:true inh)]
+-|                   (type_of_yojson ~typevar_handling ~capitalization ~internal:true inh)]
 -|                 yojson
-+|                   (type_of_jsonaf ~typevar_handling ~internal:true inh)]
++|                   (type_of_jsonaf ~typevar_handling ~capitalization ~internal:true inh)]
 +|                 jsonaf
 @|============================================================
 -|                pexp_match ~loc [%expr yojson] rftag_matches
@@ -565,8 +576,8 @@
 -|                yojson]
 +|                jsonaf]
 @|============================================================
--|  and poly_of_yojson ~typevar_handling parms tp =
-+|  and poly_of_jsonaf ~typevar_handling parms tp =
+-|  and poly_of_yojson ~typevar_handling ~capitalization parms tp =
++|  and poly_of_jsonaf ~typevar_handling ~capitalization parms tp =
 @|============================================================
 -|              fun yojson ->
 -|                Ppx_yojson_conv_lib.Yojson_conv_error.record_poly_field_value
@@ -576,14 +587,17 @@
 -|                  yojson]
 +|                  jsonaf]
 @|============================================================
--|    match type_of_yojson ~typevar_handling tp with
-+|    match type_of_jsonaf ~typevar_handling tp with
+-|    match type_of_yojson ~typevar_handling ~capitalization tp with
++|    match type_of_jsonaf ~typevar_handling ~capitalization tp with
 @|============================================================
--|        let key = Option.value ~default:nm (Attribute.get Attrs.yojson_key ld) in
+-|    let rec loop inits no_args args = function
+-|      | [] -> inits, no_args, args
++|    let rec loop inits args = function
++|      | [] -> inits, args
+@|============================================================
 -|        (match Attrs.Record_field_handler.Of_yojson.create ~loc ld, ld.pld_type with
 -|         | Some (`yojson_option tp), _ | (None | Some (`default _)), tp ->
 -|           let inits = [%expr Ppx_yojson_conv_lib.Option.None] :: inits in
-+|        let key = Option.value ~default:nm (Attribute.get Attrs.jsonaf_key ld) in
 +|        (match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld, ld.pld_type with
 +|         | Some (`jsonaf_option tp), _
 +|         | (None | Some (`default _)), tp
@@ -591,9 +605,9 @@
 +|           let inits = [%expr Ppx_jsonaf_conv_lib.Option.None] :: inits in
 @|============================================================
 -|               [%expr _field_yojson]
--|               (type_of_yojson ~typevar_handling tp)
+-|               (type_of_yojson ~typevar_handling ~capitalization tp)
 +|               [%expr _field_jsonaf]
-+|               (type_of_jsonaf ~typevar_handling tp)
++|               (type_of_jsonaf ~typevar_handling ~capitalization tp)
 @|============================================================
 -|                    match Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")] with
 -|                    | Ppx_yojson_conv_lib.Option.None ->
@@ -607,6 +621,9 @@
 +|                    | Ppx_jsonaf_conv_lib.Option.Some _ ->
 +|                      duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
 @|============================================================
+-|           loop inits no_args args more_flds)
++|           loop inits args more_flds)
+@|============================================================
 -|         if allow_extra_fields
 -|         then [%expr ()]
 -|         else
@@ -617,24 +634,57 @@
 +|         match allow_extra_fields with
 +|         | `Allow -> [%expr ()]
 +|         | `Log | `Raise ->
++|           (* It's not super clear if [record_check_extra_fields] is that useful (beyond
++|              maybe some perf debugging?) if you can annotate the behaviour when there's
++|              extra fields on the type with [allow_extra_fields]. *)
 +|           [%expr
 +|             if Ppx_jsonaf_conv_lib.( ! )
 +|                  Ppx_jsonaf_conv_lib.Jsonaf_conv.record_check_extra_fields
 +|             then extra := field_name :: Ppx_jsonaf_conv_lib.( ! ) extra
 @|============================================================
--|          let fld = [%expr Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
-+|          let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
+-|    loop [] handle_extra handle_extra (List.rev flds)
++|    loop [] handle_extra (List.rev flds)
 @|============================================================
+-|      let rec loop ((res_tpls, bi_lst, good_patts) as acc) = function
+-|        | ({ pld_name = { txt = nm; loc }; _ } as ld) :: more_flds ->
+-|          let fld = [%expr Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
+-|          let mk_default loc =
+-|            bi_lst, [%pat? [%p pvar ~loc (nm ^ "_value")]] :: good_patts
+-|          in
+-|          let new_bi_lst, new_good_patts =
 -|            match Attrs.Record_field_handler.Of_yojson.create ~loc ld with
 -|            | Some (`default _ | `yojson_option _) -> mk_default loc
-+|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
-+|            | Some (`default _ | `jsonaf_option _ | `jsonaf_list) -> mk_default loc
-@|============================================================
+-|            | None ->
+-|              has_nonopt_fields := true;
+-|              ( [%expr
 -|                  Ppx_yojson_conv_lib.poly_equal [%e fld] Ppx_yojson_conv_lib.Option.None
-+|                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
-@|============================================================
+-|                  , [%e estring ~loc nm]]
+-|                :: bi_lst
 -|              , [%pat? Ppx_yojson_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
-+|              , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
+-|                :: good_patts )
+-|          in
+-|          let acc = [%expr [%e fld]] :: res_tpls, new_bi_lst, new_good_patts in
+-|          loop acc more_flds
+-|        | [] -> acc
+-|      in
+-|      loop ([], [], []) (List.rev flds)
+-|    in
++|      List.map flds ~f:(fun ({ pld_name = { txt = nm; loc }; _ } as ld) ->
++|        let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
++|        match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
++|        | Some (`default _ | `jsonaf_option _ | `jsonaf_list) ->
++|          fld, None, [%pat? [%p pvar ~loc (nm ^ "_value")]]
++|        | None ->
++|          has_nonopt_fields := true;
++|          ( fld
++|          , Some
++|              [%expr
++|                Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
++|                , [%e estring ~loc nm]]
++|          , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]] ))
++|      |> List.unzip3
++|    in
++|    let bi_lst = List.filter_opt bi_lst in
 @|============================================================
 -|            match Attrs.Record_field_handler.Of_yojson.create ~loc ld with
 +|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
@@ -656,6 +706,9 @@
 @|============================================================
 -|                  yojson
 +|                  jsonaf
+@|============================================================
+-|    let expr_ref_inits, _mc_no_args_fields, mc_fields_with_args =
++|    let expr_ref_inits, mc_fields_with_args =
 @|============================================================
 -|              [ [%pat? (field_name, _field_yojson) :: tail]
 +|              [ [%pat? (field_name, _field_jsonaf) :: tail]
@@ -714,8 +767,8 @@
 -|  let label_declaration_list_of_yojson
 +|  let label_declaration_list_of_jsonaf
 @|============================================================
--|  let record_of_yojson ~typevar_handling ~allow_extra_fields (loc, flds) : Fun_or_match.t =
-+|  let record_of_jsonaf ~typevar_handling ~allow_extra_fields (loc, flds) : Fun_or_match.t =
+-|  let record_of_yojson ~typevar_handling ~capitalization ~allow_extra_fields (loc, flds)
++|  let record_of_jsonaf ~typevar_handling ~capitalization ~allow_extra_fields (loc, flds)
 @|============================================================
 -|      [ [%pat? `Assoc field_yojsons as yojson]
 -|        --> label_declaration_list_of_yojson
@@ -777,8 +830,8 @@
 +|        [%pat? `String [%p pstring ~loc cnstr_name] as jsonaf]
 +|        --> [%expr Ppx_jsonaf_conv_lib.Jsonaf_conv_error.stag_takes_args _tp_loc jsonaf])
 @|============================================================
--|  let sum_of_yojson ~typevar_handling (loc, alts) : Fun_or_match.t =
-+|  let sum_of_jsonaf ~typevar_handling (loc, alts) : Fun_or_match.t =
+-|  let sum_of_yojson ~typevar_handling ~capitalization (loc, alts) : Fun_or_match.t =
++|  let sum_of_jsonaf ~typevar_handling ~capitalization (loc, alts) : Fun_or_match.t =
 @|============================================================
 -|         ; [ [%pat? `List (`List _ :: _) as yojson]
 +|         ; [ [%pat? `Array (`Array _ :: _) as jsonaf]
@@ -808,8 +861,8 @@
 -|        fun yojson -> Ppx_yojson_conv_lib.Yojson_conv_error.empty_type _tp_loc yojson]
 +|        fun jsonaf -> Ppx_jsonaf_conv_lib.Jsonaf_conv_error.empty_type _tp_loc jsonaf]
 @|============================================================
--|  let td_of_yojson ~typevar_handling ~loc:_ ~poly ~path ~rec_flag td =
-+|  let td_of_jsonaf ~typevar_handling ~loc:_ ~poly ~path ~rec_flag td =
+-|  let td_of_yojson ~typevar_handling ~capitalization ~loc:_ ~poly ~path ~rec_flag td =
++|  let td_of_jsonaf ~typevar_handling ~capitalization ~loc:_ ~poly ~path ~rec_flag td =
 @|============================================================
 -|    then Location.raise_errorf ~loc "of_yojson is not supported for private type";
 +|    then Location.raise_errorf ~loc "of_jsonaf is not supported for private type";
@@ -817,8 +870,8 @@
 -|            "yojson_poly annotation on a type that is surely not a polymorphic variant";
 +|            "jsonaf_poly annotation on a type that is surely not a polymorphic variant";
 @|============================================================
--|          sum_of_yojson ~typevar_handling (td.ptype_loc, alts)
-+|          sum_of_jsonaf ~typevar_handling (td.ptype_loc, alts)
+-|          sum_of_yojson ~typevar_handling ~capitalization (td.ptype_loc, alts)
++|          sum_of_jsonaf ~typevar_handling ~capitalization (td.ptype_loc, alts)
 @|============================================================
 -|          record_of_yojson
 +|          record_of_jsonaf
@@ -872,23 +925,23 @@
 -|      let typ = Sig_generate_of_yojson.mk_type td in
 +|      let typ = Sig_generate_of_jsonaf.mk_type td in
 @|============================================================
--|  let tds_of_yojson ~loc ~poly ~path (rec_flag, tds) =
-+|  let tds_of_jsonaf ~loc ~poly ~path (rec_flag, tds) =
+-|  let tds_of_yojson ~loc ~poly ~path (rec_flag, tds) capitalization =
++|  let tds_of_jsonaf ~loc ~poly ~path (rec_flag, tds) capitalization =
 @|============================================================
--|              td_of_yojson ~typevar_handling ~loc ~poly ~path ~rec_flag td
-+|              td_of_jsonaf ~typevar_handling ~loc ~poly ~path ~rec_flag td
+-|              td_of_yojson ~typevar_handling ~capitalization ~loc ~poly ~path ~rec_flag td
++|              td_of_jsonaf ~typevar_handling ~capitalization ~loc ~poly ~path ~rec_flag td
 @|============================================================
--|            td_of_yojson ~typevar_handling ~loc ~poly ~path ~rec_flag td
-+|            td_of_jsonaf ~typevar_handling ~loc ~poly ~path ~rec_flag td
+-|            td_of_yojson ~typevar_handling ~capitalization ~loc ~poly ~path ~rec_flag td
++|            td_of_jsonaf ~typevar_handling ~capitalization ~loc ~poly ~path ~rec_flag td
 @|============================================================
--|            td_of_yojson ~typevar_handling ~poly ~loc ~path ~rec_flag td
-+|            td_of_jsonaf ~typevar_handling ~poly ~loc ~path ~rec_flag td
+-|            td_of_yojson ~typevar_handling ~capitalization ~poly ~loc ~path ~rec_flag td
++|            td_of_jsonaf ~typevar_handling ~capitalization ~poly ~loc ~path ~rec_flag td
 @|============================================================
--|  let type_of_yojson ~typevar_handling ~path ctyp =
-+|  let type_of_jsonaf ~typevar_handling ~path ctyp =
+-|  let type_of_yojson ~typevar_handling ~capitalization ~path ctyp =
++|  let type_of_jsonaf ~typevar_handling ~capitalization ~path ctyp =
 @|============================================================
--|    let fp = type_of_yojson ~typevar_handling ctyp in
-+|    let fp = type_of_jsonaf ~typevar_handling ctyp in
+-|    let fp = type_of_yojson ~typevar_handling ~capitalization ctyp in
++|    let fp = type_of_jsonaf ~typevar_handling ~capitalization ctyp in
 @|============================================================
 -|      | Fun fun_expr -> [%expr [%e fun_expr] yojson]
 -|      | Match matchings -> pexp_match ~loc [%expr yojson] matchings
@@ -904,8 +957,8 @@
 -|    Sig_generate_yojson_of.type_of_yojson_of ~loc:{ ty.ptyp_loc with loc_ghost = true } ty
 +|    Sig_generate_jsonaf_of.type_of_jsonaf_of ~loc:{ ty.ptyp_loc with loc_ghost = true } ty
 @|============================================================
--|    Str_generate_yojson_of.yojson_of_type ~typevar_handling:`disallowed_in_type_expr ty
-+|    Str_generate_jsonaf_of.jsonaf_of_type ~typevar_handling:`disallowed_in_type_expr ty
+-|    Str_generate_yojson_of.yojson_of_type
++|    Str_generate_jsonaf_of.jsonaf_of_type
 @|============================================================
 -|  let sig_type_decl = Sig_generate_yojson_of.mk_sig
 -|  let str_type_decl = Str_generate_yojson_of.yojson_of_tds
@@ -923,8 +976,8 @@
 -|    Sig_generate_of_yojson.type_of_of_yojson ~loc:{ ty.ptyp_loc with loc_ghost = true } ty
 +|    Sig_generate_of_jsonaf.type_of_of_jsonaf ~loc:{ ty.ptyp_loc with loc_ghost = true } ty
 @|============================================================
--|    Str_generate_of_yojson.type_of_yojson ~typevar_handling:`disallowed_in_type_expr
-+|    Str_generate_of_jsonaf.type_of_jsonaf ~typevar_handling:`disallowed_in_type_expr
+-|    Str_generate_of_yojson.type_of_yojson
++|    Str_generate_of_jsonaf.type_of_jsonaf
 @|============================================================
 -|  let sig_type_decl = Sig_generate_of_yojson.mk_sig
 -|  let str_type_decl = Str_generate_of_yojson.tds_of_yojson

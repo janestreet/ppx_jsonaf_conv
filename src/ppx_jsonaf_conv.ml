@@ -3,13 +3,18 @@
 open Ppxlib
 module Attrs = Ppx_jsonaf_conv_expander.Attrs
 
+let capitalization_arg =
+  Capitalization_ppx_configuration.argument ~ppx_name:"ppx_jsonaf_conv"
+;;
+
 module Jsonaf_of = struct
   module E = Ppx_jsonaf_conv_expander.Jsonaf_of
 
   let name = "jsonaf_of"
 
   let str_type_decl =
-    Deriving.Generator.make_noarg
+    Deriving.Generator.make
+      Deriving.Args.(empty +> capitalization_arg)
       E.str_type_decl
       ~attributes:
         [ Attribute.T Attrs.default
@@ -40,7 +45,14 @@ module Jsonaf_fields = struct
   module E = Ppx_jsonaf_conv_expander.Jsonaf_fields
 
   let name = "jsonaf_fields"
-  let str_type_decl = Deriving.Generator.make_noarg E.str_type_decl ~attributes:[]
+
+  let str_type_decl =
+    Deriving.Generator.make
+      Deriving.Args.(empty +> capitalization_arg)
+      E.str_type_decl
+      ~attributes:[]
+  ;;
+
   let deriver = Deriving.add name ~str_type_decl
 end
 
@@ -50,7 +62,8 @@ module Of_jsonaf = struct
   let name = "of_jsonaf"
 
   let str_type_decl =
-    Deriving.Generator.make_noarg
+    Deriving.Generator.make
+      Deriving.Args.(empty +> capitalization_arg)
       (E.str_type_decl ~poly:false)
       ~attributes:[ Attribute.T Attrs.default ]
   ;;
@@ -77,7 +90,8 @@ module Of_jsonaf_poly = struct
   module E = Ppx_jsonaf_conv_expander.Of_jsonaf
 
   let str_type_decl =
-    Deriving.Generator.make_noarg
+    Deriving.Generator.make
+      Deriving.Args.(empty +> capitalization_arg)
       (E.str_type_decl ~poly:true)
       ~attributes:[ Attribute.T Attrs.default ]
   ;;
