@@ -590,6 +590,11 @@
 -|    match type_of_yojson ~typevar_handling ~capitalization tp with
 +|    match type_of_jsonaf ~typevar_handling ~capitalization tp with
 @|============================================================
+-|    let rec loop inits no_args args = function
+-|      | [] -> inits, no_args, args
++|    let rec loop inits args = function
++|      | [] -> inits, args
+@|============================================================
 -|        (match Attrs.Record_field_handler.Of_yojson.create ~loc ld, ld.pld_type with
 -|         | Some (`yojson_option tp), _ | (None | Some (`default _)), tp ->
 -|           let inits = [%expr Ppx_yojson_conv_lib.Option.None] :: inits in
@@ -616,6 +621,9 @@
 +|                    | Ppx_jsonaf_conv_lib.Option.Some _ ->
 +|                      duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
 @|============================================================
+-|           loop inits no_args args more_flds)
++|           loop inits args more_flds)
+@|============================================================
 -|         if allow_extra_fields
 -|         then [%expr ()]
 -|         else
@@ -626,24 +634,57 @@
 +|         match allow_extra_fields with
 +|         | `Allow -> [%expr ()]
 +|         | `Log | `Raise ->
++|           (* It's not super clear if [record_check_extra_fields] is that useful (beyond
++|              maybe some perf debugging?) if you can annotate the behaviour when there's
++|              extra fields on the type with [allow_extra_fields]. *)
 +|           [%expr
 +|             if Ppx_jsonaf_conv_lib.( ! )
 +|                  Ppx_jsonaf_conv_lib.Jsonaf_conv.record_check_extra_fields
 +|             then extra := field_name :: Ppx_jsonaf_conv_lib.( ! ) extra
 @|============================================================
--|          let fld = [%expr Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
-+|          let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
+-|    loop [] handle_extra handle_extra (List.rev flds)
++|    loop [] handle_extra (List.rev flds)
 @|============================================================
+-|      let rec loop ((res_tpls, bi_lst, good_patts) as acc) = function
+-|        | ({ pld_name = { txt = nm; loc }; _ } as ld) :: more_flds ->
+-|          let fld = [%expr Ppx_yojson_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
+-|          let mk_default loc =
+-|            bi_lst, [%pat? [%p pvar ~loc (nm ^ "_value")]] :: good_patts
+-|          in
+-|          let new_bi_lst, new_good_patts =
 -|            match Attrs.Record_field_handler.Of_yojson.create ~loc ld with
 -|            | Some (`default _ | `yojson_option _) -> mk_default loc
-+|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
-+|            | Some (`default _ | `jsonaf_option _ | `jsonaf_list) -> mk_default loc
-@|============================================================
+-|            | None ->
+-|              has_nonopt_fields := true;
+-|              ( [%expr
 -|                  Ppx_yojson_conv_lib.poly_equal [%e fld] Ppx_yojson_conv_lib.Option.None
-+|                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
-@|============================================================
+-|                  , [%e estring ~loc nm]]
+-|                :: bi_lst
 -|              , [%pat? Ppx_yojson_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
-+|              , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
+-|                :: good_patts )
+-|          in
+-|          let acc = [%expr [%e fld]] :: res_tpls, new_bi_lst, new_good_patts in
+-|          loop acc more_flds
+-|        | [] -> acc
+-|      in
+-|      loop ([], [], []) (List.rev flds)
+-|    in
++|      List.map flds ~f:(fun ({ pld_name = { txt = nm; loc }; _ } as ld) ->
++|        let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
++|        match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
++|        | Some (`default _ | `jsonaf_option _ | `jsonaf_list) ->
++|          fld, None, [%pat? [%p pvar ~loc (nm ^ "_value")]]
++|        | None ->
++|          has_nonopt_fields := true;
++|          ( fld
++|          , Some
++|              [%expr
++|                Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
++|                , [%e estring ~loc nm]]
++|          , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]] ))
++|      |> List.unzip3
++|    in
++|    let bi_lst = List.filter_opt bi_lst in
 @|============================================================
 -|            match Attrs.Record_field_handler.Of_yojson.create ~loc ld with
 +|            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
@@ -665,6 +706,9 @@
 @|============================================================
 -|                  yojson
 +|                  jsonaf
+@|============================================================
+-|    let expr_ref_inits, _mc_no_args_fields, mc_fields_with_args =
++|    let expr_ref_inits, mc_fields_with_args =
 @|============================================================
 -|              [ [%pat? (field_name, _field_yojson) :: tail]
 +|              [ [%pat? (field_name, _field_jsonaf) :: tail]

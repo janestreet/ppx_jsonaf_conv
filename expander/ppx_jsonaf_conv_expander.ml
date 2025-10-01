@@ -1479,8 +1479,8 @@ module Str_generate_of_jsonaf = struct
 
   (* Generate code for extracting record fields *)
   let mk_extract_fields ~typevar_handling ~capitalization ~allow_extra_fields (loc, flds) =
-    let rec loop inits no_args args = function
-      | [] -> inits, no_args, args
+    let rec loop inits args = function
+      | [] -> inits, args
       | ld :: more_flds ->
         let loc = ld.pld_name.loc in
         let nm = ld.pld_name.txt in
@@ -1508,7 +1508,7 @@ module Str_generate_of_jsonaf = struct
                       duplicates := field_name :: Ppx_jsonaf_conv_lib.( ! ) duplicates])
              :: args
            in
-           loop inits no_args args more_flds)
+           loop inits args more_flds)
     in
     let handle_extra =
       [ ([%pat? _]
@@ -1516,6 +1516,9 @@ module Str_generate_of_jsonaf = struct
          match allow_extra_fields with
          | `Allow -> [%expr ()]
          | `Log | `Raise ->
+           (* It's not super clear if [record_check_extra_fields] is that useful (beyond
+              maybe some perf debugging?) if you can annotate the behaviour when there's
+              extra fields on the type with [allow_extra_fields]. *)
            [%expr
              if Ppx_jsonaf_conv_lib.( ! )
                   Ppx_jsonaf_conv_lib.Jsonaf_conv.record_check_extra_fields
@@ -1523,37 +1526,29 @@ module Str_generate_of_jsonaf = struct
              else ()])
       ]
     in
-    loop [] handle_extra handle_extra (List.rev flds)
+    loop [] handle_extra (List.rev flds)
   ;;
 
   (* Generate code for handling the result of matching record fields *)
   let mk_handle_record_match_result has_poly (loc, flds) ~wrap_expr =
     let has_nonopt_fields = ref false in
     let res_tpls, bi_lst, good_patts =
-      let rec loop ((res_tpls, bi_lst, good_patts) as acc) = function
-        | ({ pld_name = { txt = nm; loc }; _ } as ld) :: more_flds ->
-          let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
-          let mk_default loc =
-            bi_lst, [%pat? [%p pvar ~loc (nm ^ "_value")]] :: good_patts
-          in
-          let new_bi_lst, new_good_patts =
-            match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
-            | Some (`default _ | `jsonaf_option _ | `jsonaf_list) -> mk_default loc
-            | None ->
-              has_nonopt_fields := true;
-              ( [%expr
-                  Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
-                  , [%e estring ~loc nm]]
-                :: bi_lst
-              , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]]
-                :: good_patts )
-          in
-          let acc = [%expr [%e fld]] :: res_tpls, new_bi_lst, new_good_patts in
-          loop acc more_flds
-        | [] -> acc
-      in
-      loop ([], [], []) (List.rev flds)
+      List.map flds ~f:(fun ({ pld_name = { txt = nm; loc }; _ } as ld) ->
+        let fld = [%expr Ppx_jsonaf_conv_lib.( ! ) [%e evar ~loc (nm ^ "_field")]] in
+        match Attrs.Record_field_handler.Of_jsonaf.create ~loc ld with
+        | Some (`default _ | `jsonaf_option _ | `jsonaf_list) ->
+          fld, None, [%pat? [%p pvar ~loc (nm ^ "_value")]]
+        | None ->
+          has_nonopt_fields := true;
+          ( fld
+          , Some
+              [%expr
+                Ppx_jsonaf_conv_lib.poly_equal [%e fld] Ppx_jsonaf_conv_lib.Option.None
+                , [%e estring ~loc nm]]
+          , [%pat? Ppx_jsonaf_conv_lib.Option.Some [%p pvar ~loc (nm ^ "_value")]] ))
+      |> List.unzip3
     in
+    let bi_lst = List.filter_opt bi_lst in
     let match_good_expr =
       if has_poly
       then (
@@ -1615,7 +1610,7 @@ module Str_generate_of_jsonaf = struct
     (loc, flds)
     ~wrap_expr
     =
-    let expr_ref_inits, _mc_no_args_fields, mc_fields_with_args =
+    let expr_ref_inits, mc_fields_with_args =
       mk_extract_fields ~typevar_handling ~capitalization ~allow_extra_fields (loc, flds)
     in
     let field_refs =
