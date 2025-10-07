@@ -2,6 +2,6 @@
  (name ppx_jsonaf_conv)
  (public_name ppx_jsonaf_conv)
  (kind ppx_deriver)
- (libraries ppxlib ppx_jsonaf_conv_expander)
+ (libraries ppxlib ppx_jsonaf_conv_expander capitalization.ppx_configuration)
  (preprocess
   (pps ppx_jane)))

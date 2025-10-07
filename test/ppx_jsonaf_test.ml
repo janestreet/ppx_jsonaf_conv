@@ -23,11 +23,11 @@ module Fields = struct
     ; y : int [@key "some"]
     ; z : int [@key "some"]
     }
-  [@@deriving jsonaf_fields]
+  [@@deriving jsonaf_fields ~capitalize:"PascalCase"]
 
   let%expect_test _ =
     print_s [%sexp (jsonaf_fields_of_ty : string list)];
-    [%expect {| (x some some) |}]
+    [%expect {| (X some some) |}]
   ;;
 end
 
@@ -447,6 +447,46 @@ module Name = struct
   ;;
 end
 
+module Capitalize_variants = struct
+  type nominal =
+    | Con_1
+    | Con_2 of int
+    | Con_3 of (int * string)
+    | Con_4 of int * string
+    | Con_5 of { a : int }
+    | Con_6 of { b : int } [@name "something-custom"]
+  [@@deriving jsonaf ~capitalize:"kebab-case", equal]
+
+  let ( = ) = equal_nominal
+
+  let%expect_test _ =
+    List.iter
+      ~f:(fun value ->
+        let jsonaf = jsonaf_of_nominal value in
+        print_s (Jsonaf.sexp_of_t jsonaf);
+        require (nominal_of_jsonaf jsonaf = value))
+      [ Con_1; Con_2 2; Con_3 (1, "a"); Con_4 (1, "a"); Con_5 { a = 1 }; Con_6 { b = 1 } ];
+    [%expect
+      {|
+      (Array ((String con-1)))
+      (Array (
+        (String con-2)
+        (Number 2)))
+      (Array (
+        (String con-3)
+        (Array (
+          (Number 1)
+          (String a)))))
+      (Array (
+        (String con-4)
+        (Number 1)
+        (String a)))
+      (Array ((String con-5) (Object ((a (Number 1))))))
+      (Array ((String something-custom) (Object ((b (Number 1))))))
+      |}]
+  ;;
+end
+
 module Records = struct
   type t =
     { a : int
@@ -500,6 +540,29 @@ module Keys = struct
         (key_c (Number 3))
         (key_d (Number 4))
         (""    (Number 5))))
+      |}]
+  ;;
+end
+
+module Capitalize_arg = struct
+  type t =
+    { name_a : int
+    ; name_b : int option [@key "otherName"]
+    }
+  [@@deriving jsonaf ~capitalize:"camelCase", equal]
+
+  let ( = ) = equal
+
+  let%expect_test _ =
+    let t = { name_a = 1; name_b = Some 2 } in
+    let jsonaf = jsonaf_of_t t in
+    print_s (Jsonaf.sexp_of_t jsonaf);
+    require (t_of_jsonaf jsonaf = t);
+    [%expect
+      {|
+      (Object (
+        (nameA     (Number 1))
+        (otherName (Number 2))))
       |}]
   ;;
 end
