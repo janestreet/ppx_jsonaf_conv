@@ -187,8 +187,8 @@
 -|  and yojson_of_poly ~typevar_handling ~capitalization parms tp =
 +|  and jsonaf_of_poly ~typevar_handling ~capitalization parms tp =
 @|============================================================
--|      (* Should be impossible because [yojson_of_poly] is only called on polymorphic record
-+|      (* Should be impossible because [jsonaf_of_poly] is only called on polymorphic record
+-|      (* Should be impossible because [yojson_of_poly] is only called on polymorphic
++|      (* Should be impossible because [jsonaf_of_poly] is only called on polymorphic
 @|============================================================
 -|            ~expr:[%expr Ppx_yojson_conv_lib.Yojson_conv.yojson_of_opaque]
 +|            ~expr:[%expr Ppx_jsonaf_conv_lib.Jsonaf_conv.jsonaf_of_opaque]
@@ -816,8 +816,8 @@
 +|          `Array (`String ([%p pstring ~loc cnstr_name] as _tag) :: jsonaf_args) as
 +|          _jsonaf]
 @|============================================================
--|  (* Generate matching code for malformed Yojsons with good tags
-+|  (* Generate matching code for malformed Jsonaf_kernels with good tags
+-|  (* Generate matching code for malformed Yojsons with good tags wrt. sum types *)
++|  (* Generate matching code for malformed Jsonaf_kernels with good tags wrt. sum types *)
 @|============================================================
 -|        [%pat? `List (`String [%p pstring ~loc cnstr_name] :: _) as yojson]
 -|        --> [%expr Ppx_yojson_conv_lib.Yojson_conv_error.stag_no_args _tp_loc yojson]
