@@ -58,7 +58,7 @@ module Fun_or_match = struct
   ;;
 end
 
-(* A renaming is a mapping from type variable name to type variable name.
+(*=A renaming is a mapping from type variable name to type variable name.
    In definitions such as:
 
    type 'a t =
@@ -1666,7 +1666,7 @@ module Str_generate_of_jsonaf = struct
                       ~loc:_tp_loc
                       (Ppx_jsonaf_conv_lib.( ! ) extra)
                   in
-                  [%log.global.error msg];
+                  [%log.error msg];
                   [%e sub_expr]]
               | `Raise ->
                 [%expr

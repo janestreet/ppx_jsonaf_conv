@@ -750,7 +750,7 @@
 +|                      ~loc:_tp_loc
 +|                      (Ppx_jsonaf_conv_lib.( ! ) extra)
 +|                  in
-+|                  [%log.global.error msg];
++|                  [%log.error msg];
 +|                  [%e sub_expr]]
 +|              | `Raise ->
 +|                [%expr
