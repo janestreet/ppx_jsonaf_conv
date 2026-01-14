@@ -1,5 +1,4 @@
-(* Conv_error: Module for Handling Errors during Automated Jsonaf_kernel
-   Conversions *)
+(* Conv_error: Module for Handling Errors during Automated Jsonaf_kernel Conversions *)
 
 open! StdLabels
 open Jsonaf_kernel.Conv

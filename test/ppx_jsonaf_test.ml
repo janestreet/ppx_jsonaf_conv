@@ -985,7 +985,7 @@ module Drop_if = struct
          [@jsonaf_drop_if
            fun x ->
              (* pa_type_conv used to drop parens altogether, causing type errors in the
-                 following code *)
+                following code *)
              let pair = x, 2 in
              match Some pair with
              | None -> true
@@ -1276,8 +1276,8 @@ module Anonymous_variable = struct
     [%expect {| (Number 2) |}]
   ;;
 
-  (* making sure we don't generate signatures like (_ -> t) -> _ t -> t which
-     are too general *)
+  (* making sure we don't generate signatures like (_ -> t) -> _ t -> t which are too
+     general *)
   module M : sig
     type _ t [@@deriving jsonaf]
   end = struct
@@ -1426,7 +1426,8 @@ module Variance = struct
 end
 
 module Clash = struct
-  (* Same name for type-var and type-name; must be careful when introducing rigid type names. *)
+  (* Same name for type-var and type-name; must be careful when introducing rigid type
+     names. *)
   type 'hey hey = Hey of 'hey [@@deriving jsonaf]
   type 'hey rigid_hey = Hey of 'hey [@@deriving jsonaf]
   type ('foo, 'rigid_foo) foo = Foo of 'foo [@@deriving jsonaf]
