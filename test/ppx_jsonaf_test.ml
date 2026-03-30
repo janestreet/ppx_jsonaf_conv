@@ -53,6 +53,45 @@ module Option = struct
   ;;
 end
 
+module Or_null = struct
+  (* Makes sure that the ppx generates code that works if these constructors have
+     non-standard meanings. (Though the ppx expansion still breaks if [] or (::) are
+     redefined...) *)
+  type bad_constructor_names =
+    | Null
+    | This of unit
+    | None
+    | Some of unit
+
+  let _ : bad_constructor_names list = [ None; Null; This (); Some () ]
+
+  type ty =
+    { a : int or_null
+    ; b : int or_null
+    ; c : int or_null [@jsonaf.or_null]
+    ; d : int or_null [@jsonaf.or_null]
+    }
+  [@@deriving jsonaf, equal]
+
+  let ( = ) = equal_ty
+
+  let%expect_test _ =
+    let value = { a = Null; b = This 2; c = Null; d = This 4 } in
+    let jsonaf = jsonaf_of_ty value in
+    print_endline (Jsonaf.to_string_hum jsonaf);
+    [%expect
+      {|
+      {
+        "a": null,
+        "b": 2,
+        "d": 4
+      }
+      |}];
+    let value' = ty_of_jsonaf jsonaf in
+    require (value = value')
+  ;;
+end
+
 module Default_omit = struct
   type ty =
     { x : int option
@@ -912,6 +951,9 @@ module Drop_default = struct
 
   type my_int = int [@@deriving jsonaf]
 
+  let%template[@mode _ = (local, global)] equal_my_int = equal_int
+  let%template[@mode _ = (local, global)] compare_my_int = compare_int
+
   module Poly = struct
     type nonrec t = t = { a : my_int [@default 2] [@jsonaf_drop_default ( = )] }
     [@@deriving jsonaf]
@@ -923,8 +965,6 @@ module Drop_default = struct
   end
 
   module Equal = struct
-    let equal_my_int = equal_int
-
     type nonrec t = t = { a : my_int [@default 2] [@jsonaf_drop_default.equal] }
     [@@deriving jsonaf]
 
@@ -935,9 +975,27 @@ module Drop_default = struct
   end
 
   module Compare = struct
-    let compare_my_int = compare_int
-
     type nonrec t = t = { a : my_int [@default 2] [@jsonaf_drop_default.compare] }
+    [@@deriving jsonaf]
+
+    let%expect_test _ =
+      test t_of_jsonaf jsonaf_of_t;
+      [%expect {| |}]
+    ;;
+  end
+
+  module Equal_local = struct
+    type nonrec t = t = { a : my_int [@default 2] [@jsonaf_drop_default.equal.local] }
+    [@@deriving jsonaf]
+
+    let%expect_test _ =
+      test t_of_jsonaf jsonaf_of_t;
+      [%expect {| |}]
+    ;;
+  end
+
+  module Compare_local = struct
+    type nonrec t = t = { a : my_int [@default 2] [@jsonaf_drop_default.compare.local] }
     [@@deriving jsonaf]
 
     let%expect_test _ =

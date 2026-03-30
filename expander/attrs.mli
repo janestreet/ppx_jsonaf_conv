@@ -20,6 +20,7 @@ module Record_field_handler : sig
   type common =
     [ `jsonaf_option of core_type
     | `jsonaf_list
+    | `jsonaf_or_null of core_type
     ]
 
   module Of_jsonaf : sig
@@ -34,7 +35,13 @@ module Record_field_handler : sig
   module Jsonaf_of : sig
     type t =
       [ common
-      | `drop_default of [ `no_arg | `compare | `equal | `jsonaf | `func of expression ]
+      | `drop_default of
+        [ `no_arg
+        | `compare of [ `local | `global ]
+        | `equal of [ `local | `global ]
+        | `jsonaf
+        | `func of expression
+        ]
       | `drop_if of expression
       | `keep
       ]
