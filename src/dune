@@ -4,4 +4,4 @@
  (kind ppx_deriver)
  (libraries ppxlib ppx_jsonaf_conv_expander capitalization.ppx_configuration)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

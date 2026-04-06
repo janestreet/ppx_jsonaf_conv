@@ -1,2 +1,1 @@
-module Nonrec_test = Nonrec_test
-module Ppx_jsonaf_test = Ppx_jsonaf_test
+(* We don’t export anything as this library only contains tests *)

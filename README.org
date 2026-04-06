@@ -101,6 +101,16 @@ Some value  =>  value
 
 The rules for variants are described below.
 
+*** Or_null
+
+With a compatible compiler and or_null, =Null= is treated as Jsonaf_kernel =`Null=, and =This= is
+treated as the value contained, as shown below.
+
+#+begin_src ocaml
+Null        =>  `Null
+This value  =>  value
+#+end_src
+
 *** Records
 
 Records are represented as Jsonaf_kernel =`Object of (string * t) list=, where item of the list is a
@@ -114,21 +124,22 @@ key-value pair. Each pair consists of the name of the record field
 #+end_src
 
 Type specifications of records allow the use of several attributes. The
-attribute =jsonaf.option= indicates that a record field should be optional.
+attribute =jsonaf.option= or =jsonaf.or_null= indicates that a record field should be optional.
 /e.g./:
 
 #+begin_src ocaml
   type t =
     { x : int option;
       y : int option [@jsonaf.option];
+      z : int or_null [@jsonaf.or_null];
     } [@@deriving jsonaf]
 #+end_src
 
 The following examples show how this works.
 
 #+begin_src ocaml
-  { x = Some 1; y = Some 2; } => {"x":1,"y":2}
-  { x = None  ; y = None;   } => {"x":null}
+  { x = Some 1; y = Some 2; z = This 3 } => {"x":1,"y":2,"z":3}
+  { x = None  ; y = None; z = Null } => {"x":null}
 #+end_src
 
 The attribute =jsonaf.list= indicates that a record field could be ommitted if
@@ -222,6 +233,8 @@ are several ways to specify the equality function:
       c : u [@default u0] [@jsonaf_drop_default.equal]; (* uses [%equal: u] *)
       d : u [@default u0] [@jsonaf_drop_default.jsonaf]; (* compares jsonaf representations *)
       e : u [@default u0] [@jsonaf_drop_default]; (* deprecated. uses polymorphic equality. *)
+      f : u [@default u0] [@jsonaf_drop_default.compare.local]; (* uses [%compare.equal__local: u] *)
+      g : u [@default u0] [@jsonaf_drop_default.equal.local]; (* uses [%equal__local: u] *)
     } [@@deriving jsonaf]
 #+end_src
 
@@ -397,6 +410,26 @@ OCaml-implementation of hash tables keeps duplicates.  Bindings will
 be inserted into the hash table in the order of appearance. Therefore,
 the last binding of a key will be the "visible" one, the others are
 "hidden".  See the OCaml documentation on hash tables for details.
+
+** Stackify
+
+When using [[https://oxcaml.org][OxCaml]], you can derive a stack-allocating =of_json= function that accepts a
+stack-allocated input. For example:
+#+begin_src ocaml
+type t = { a : string ; b : int } [@@deriving of_jsonaf ~stackify]
+#+end_src
+
+which generates
+#+begin_src ocaml
+val t_of_jsonaf : Jsonaf.t -> t
+val t_of_jsonaf__stack : Jsonaf.t @ local -> t @ local
+#+end_src
+
+You can use this with =ppx_template= like
+#+begin_src ocaml
+let t = (t_of_jsonaf [@alloc stack]) json in
+...
+#+end_src
 
 ** A note about signatures
 

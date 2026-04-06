@@ -59,17 +59,34 @@ end
 module Of_jsonaf = struct
   module E = Ppx_jsonaf_conv_expander.Of_jsonaf
 
+  let normal = Ppx_jsonaf_conv_expander.Config.default
+  let stack = Ppx_jsonaf_conv_expander.Config.stack
   let name = "of_jsonaf"
 
   let str_type_decl =
     Deriving.Generator.make
-      Deriving.Args.(empty +> capitalization_arg)
-      (E.str_type_decl ~poly:false)
+      Deriving.Args.(empty +> capitalization_arg +> flag "stackify")
+      (fun ~loc ~path tds capitalization stackify ->
+        let ordinary =
+          E.str_type_decl ~config:normal ~poly:false ~loc ~path tds capitalization
+        in
+        let stack () =
+          E.str_type_decl ~config:stack ~poly:false ~loc ~path tds capitalization
+        in
+        if stackify then ordinary @ stack () else ordinary)
       ~attributes:[ Attribute.T Attrs.default ]
   ;;
 
-  let sig_type_decl = Deriving.Generator.make_noarg (E.sig_type_decl ~poly:false)
-  let extension ~loc:_ ~path ctyp = E.core_type ~path ctyp
+  let sig_type_decl =
+    Deriving.Generator.make
+      Deriving.Args.(empty +> flag "stackify")
+      (fun ~loc ~path tds stackify ->
+        let ordinary = E.sig_type_decl ~config:normal ~poly:false ~loc ~path tds in
+        let stack () = E.sig_type_decl ~config:stack ~poly:false ~loc ~path tds in
+        if stackify then ordinary @ stack () else ordinary)
+  ;;
+
+  let extension ~loc:_ ~path ctyp = E.core_type ~config:normal ~path ctyp
   let deriver = Deriving.add name ~str_type_decl ~sig_type_decl ~extension
 
   let () =
@@ -81,7 +98,7 @@ module Of_jsonaf = struct
                name
                Core_type
                Ast_pattern.(ptyp __)
-               (fun ~loc:_ ~path:_ ty -> E.type_extension ty))
+               (fun ~loc:_ ~path:_ ty -> E.type_extension ~config:normal ty))
         ]
   ;;
 end
@@ -89,14 +106,16 @@ end
 module Of_jsonaf_poly = struct
   module E = Ppx_jsonaf_conv_expander.Of_jsonaf
 
+  let config = Ppx_jsonaf_conv_expander.Config.default
+
   let str_type_decl =
     Deriving.Generator.make
       Deriving.Args.(empty +> capitalization_arg)
-      (E.str_type_decl ~poly:true)
+      (E.str_type_decl ~config ~poly:true)
       ~attributes:[ Attribute.T Attrs.default ]
   ;;
 
-  let sig_type_decl = Deriving.Generator.make_noarg (E.sig_type_decl ~poly:true)
+  let sig_type_decl = Deriving.Generator.make_noarg (E.sig_type_decl ~config ~poly:true)
   let deriver = Deriving.add "of_jsonaf_poly" ~sig_type_decl ~str_type_decl
 end
 

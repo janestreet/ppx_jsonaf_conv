@@ -1,5 +1,6 @@
 (library
  (name ppx_jsonaf_conv_lib)
  (public_name ppx_jsonaf_conv.runtime-lib)
- (libraries jsonaf.kernel)
- (preprocess no_preprocessing))
+ (libraries jsonaf.kernel basement)
+ (preprocess
+  (pps ppx_template)))

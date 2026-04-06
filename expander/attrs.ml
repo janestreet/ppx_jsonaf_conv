@@ -17,21 +17,19 @@ let drop_default =
     (fun x -> x)
 ;;
 
-let drop_default_equal =
+let drop_default_comparison ~f ~local =
+  let suffix = if local then ".local" else "" in
   Attribute.declare
-    "jsonaf.@jsonaf_drop_default.equal"
+    ("jsonaf.@jsonaf_drop_default" ^ "." ^ f ^ suffix)
     Attribute.Context.label_declaration
     Ast_pattern.(pstr nil)
     ()
 ;;
 
-let drop_default_compare =
-  Attribute.declare
-    "jsonaf.@jsonaf_drop_default.compare"
-    Attribute.Context.label_declaration
-    Ast_pattern.(pstr nil)
-    ()
-;;
+let drop_default_equal = drop_default_comparison ~f:"equal" ~local:false
+let drop_default_compare = drop_default_comparison ~f:"compare" ~local:false
+let drop_default_equal_local = drop_default_comparison ~f:"equal" ~local:true
+let drop_default_compare_local = drop_default_comparison ~f:"compare" ~local:true
 
 let drop_default_jsonaf =
   Attribute.declare
@@ -56,6 +54,14 @@ let opaque =
 let option =
   Attribute.declare
     "jsonaf.option"
+    Attribute.Context.label_declaration
+    Ast_pattern.(pstr nil)
+    ()
+;;
+
+let or_null =
+  Attribute.declare
+    "jsonaf.or_null"
     Attribute.Context.label_declaration
     Ast_pattern.(pstr nil)
     ()
@@ -173,6 +179,7 @@ let fail_if_allow_extra_field_td ~loc x =
 module Record_field_handler = struct
   type common =
     [ `jsonaf_option of core_type
+    | `jsonaf_or_null of core_type
     | `jsonaf_list
     ]
 
@@ -188,6 +195,13 @@ module Record_field_handler = struct
             (match ld.pld_type with
              | [%type: [%t? ty] option] -> Some (`jsonaf_option ty, "[@jsonaf.option]")
              | _ -> invalid_attribute ~loc option "_ option")
+          | None -> None)
+      ; (fun ld ->
+          match Attribute.get or_null ld with
+          | Some () ->
+            (match ld.pld_type with
+             | [%type: [%t? ty] or_null] -> Some (`jsonaf_or_null ty, "[@jsonaf.or_null]")
+             | _ -> invalid_attribute ~loc or_null "_ or_null")
           | None -> None)
       ; (fun ld ->
           match Attribute.get list ld with
@@ -222,7 +236,13 @@ module Record_field_handler = struct
   module Jsonaf_of = struct
     type t =
       [ common
-      | `drop_default of [ `no_arg | `compare | `equal | `jsonaf | `func of expression ]
+      | `drop_default of
+        [ `no_arg
+        | `compare of [ `local | `global ]
+        | `equal of [ `local | `global ]
+        | `jsonaf
+        | `func of expression
+        ]
       | `drop_if of expression
       | `keep
       ]
@@ -233,8 +253,13 @@ module Record_field_handler = struct
         [ get_attribute drop_default ~f:(function
             | None -> `drop_default `no_arg
             | Some e -> `drop_default (`func e))
-        ; get_attribute drop_default_equal ~f:(fun () -> `drop_default `equal)
-        ; get_attribute drop_default_compare ~f:(fun () -> `drop_default `compare)
+        ; get_attribute drop_default_equal ~f:(fun () -> `drop_default (`equal `global))
+        ; get_attribute drop_default_compare ~f:(fun () ->
+            `drop_default (`compare `global))
+        ; get_attribute drop_default_equal_local ~f:(fun () ->
+            `drop_default (`equal `local))
+        ; get_attribute drop_default_compare_local ~f:(fun () ->
+            `drop_default (`compare `local))
         ; get_attribute drop_default_jsonaf ~f:(fun () -> `drop_default `jsonaf)
         ; get_attribute drop_if ~f:(fun x -> `drop_if x)
         ]

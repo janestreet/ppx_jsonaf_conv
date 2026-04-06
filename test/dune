@@ -1,7 +1,7 @@
 (library
  (name ppx_jsonaf_conv_test)
  (libraries async_log.kernel base expect_test_helpers_core jsonaf_bignum
-   bignum jsonaf jsonaf.kernel stdio)
+   bignum jsonaf jsonaf.kernel ppx_jsonaf_conv_lib stdio)
  (flags :standard -w -30)
  (preprocess
   (pps ppx_jane ppx_jsonaf_conv ppx_compare)))
