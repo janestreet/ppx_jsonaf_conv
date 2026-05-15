@@ -426,11 +426,7 @@ module Sig_generate_of_jsonaf = struct
      ]}
      into
      {[
-       val t_of_jsonaf
-         :  (Jsonaf.t @ local -> 'a @ local) @ local
-         -> (Jsonaf.t @ local -> 'b @ local) @ local
-         -> Jsonaf.t @ local
-         -> ('a, 'b) t @ local
+       val t_of_jsonaf : (Jsonaf.t -> 'a) -> (Jsonaf.t -> 'b) -> Jsonaf.t -> ('a, 'b) t
      ]}
   *)
   let rec add_modes_to_arrow_type ~modes (typ : core_type) : core_type =
@@ -1661,9 +1657,14 @@ module Str_generate_of_jsonaf = struct
       Fun
         [%expr
           fun jsonaf ->
-            try [%e pexp_match ~loc [%expr jsonaf] top_match] with
-            | Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match ->
-              [%e no_matching_variant_found] _tp_loc jsonaf])
+            [%e
+              maybe_wrap_with_exclave
+                ~config
+                ~loc
+                [%expr
+                  try [%e pexp_match ~loc [%expr jsonaf] top_match] with
+                  | Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match ->
+                    [%e no_matching_variant_found] _tp_loc jsonaf]]])
     else Match top_match
 
   and poly_of_jsonaf ~config ~typevar_handling ~capitalization parms tp =
