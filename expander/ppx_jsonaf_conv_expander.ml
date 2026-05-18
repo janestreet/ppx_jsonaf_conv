@@ -1687,9 +1687,14 @@ module Str_generate_of_jsonaf = struct
       Fun
         [%expr
           fun jsonaf ->
-            try [%e pexp_match ~loc [%expr jsonaf] top_match] with
-            | Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match ->
-              [%e no_matching_variant_found] _tp_loc jsonaf])
+            [%e
+              maybe_wrap_with_exclave
+                ~config
+                ~loc
+                [%expr
+                  try [%e pexp_match ~loc [%expr jsonaf] top_match] with
+                  | Ppx_jsonaf_conv_lib.Jsonaf_conv_error.No_variant_match ->
+                    [%e no_matching_variant_found] _tp_loc jsonaf]]])
     else Match top_match
 
   and poly_of_jsonaf ~config ~typevar_handling ~capitalization parms tp =
