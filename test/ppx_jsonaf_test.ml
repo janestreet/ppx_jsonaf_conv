@@ -915,7 +915,7 @@ module Type_alias = struct
   end
 
   module C : sig
-    type t = int as 'a [@@deriving jsonaf]
+    type t = int as 'a [@@warning "-unused-type-declaration"] [@@deriving jsonaf]
   end = struct
     type t = int [@@deriving jsonaf]
   end
